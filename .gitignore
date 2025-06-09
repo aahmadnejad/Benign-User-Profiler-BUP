@@ -7,3 +7,5 @@ run_bup.py
 CHANGES.md
 INSTALL.md
 example.py
+__pycache__
+.idea
