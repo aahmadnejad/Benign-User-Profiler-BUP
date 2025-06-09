@@ -5,9 +5,9 @@ try:
 except ImportError as error:
     raise SystemExit(error)
 
-version = "0.1.0"
-author = "Moein Shafi"
-author_email = "moeinsh@yorku.ca"
+version = "1.0.0"
+author = "AmirHossein Ahmadnejad Roudsari, Moein Shafi"
+author_email = "amirhahm@yorku.ca"
 entry_points = {
         "console_scripts": ["benign-user-profiler = BenignUserProfiler.__main__:main"]
         }

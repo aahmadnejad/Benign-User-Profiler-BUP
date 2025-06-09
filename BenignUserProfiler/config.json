@@ -58,6 +58,132 @@
     "start_time": "13:30",
     "start_time_format": "%H:%M"
   },
+  "email_sending": {
+    "type": "SMTP",
+    "service": "gmail",
+    "sender": "your.email@gmail.com",
+    "password": "your_app_password",
+    "receivers": ["recipient1@example.com", "recipient2@example.com"],
+    "generate_content": true,
+    "num_emails": 2,
+    "simulate": true,
+    "frequency": 1,
+    "time_interval": [1800, 3600],
+    "start_time": "11:00",
+    "start_time_format": "%H:%M"
+  },
+  "email_checking": {
+    "type": "IMAP",
+    "service": "gmail",
+    "username": "your.email@gmail.com",
+    "password": "your_app_password",
+    "mailbox": "INBOX",
+    "search_criteria": "UNSEEN",
+    "max_emails": 5,
+    "mark_as_read": true,
+    "check_folders": ["Sent", "Drafts", "Important"],
+    "download_attachments": true,
+    "attachments_dir": "/tmp/email_attachments",
+    "simulate": true,
+    "frequency": 2,
+    "time_interval": [1200, 2400],
+    "start_time": "09:30",
+    "start_time_format": "%H:%M"
+  },
+  "ftp_operations": {
+    "type": "FTP",
+    "address": "ftp.example.com",
+    "username": "ftpuser",
+    "password": "ftppassword",
+    "browse": ["/", "/public", "/uploads"],
+    "downloads": [
+      {
+        "path": "/public",
+        "output_dir": "/tmp/ftp_downloads",
+        "file_name": "data.txt",
+        "wait_after": 5
+      }
+    ],
+    "uploads": [
+      {
+        "path": "/uploads",
+        "input_dir": "/tmp/ftp_uploads",
+        "file_name": "report.txt",
+        "wait_after": 5
+      }
+    ],
+    "simulate": true,
+    "frequency": 1,
+    "time_interval": [3600, 7200],
+    "start_time": "14:00",
+    "start_time_format": "%H:%M"
+  },
+  "sftp_operations": {
+    "type": "SFTP",
+    "address": "sftp.example.com",
+    "username": "sftpuser",
+    "password": "sftppassword",
+    "browse": ["/home/user", "/home/user/documents"],
+    "downloads": [
+      {
+        "path": "/home/user/documents",
+        "output_dir": "/tmp/sftp_downloads",
+        "file_name": "important.pdf",
+        "wait_after": 5
+      }
+    ],
+    "uploads": [
+      {
+        "path": "/home/user/uploads",
+        "input_dir": "/tmp/sftp_uploads",
+        "file_name": "data.csv",
+        "wait_after": 5
+      }
+    ],
+    "simulate": true,
+    "frequency": 1,
+    "time_interval": [4800, 9600],
+    "start_time": "15:00",
+    "start_time_format": "%H:%M"
+  },
+  "ssh_commands": {
+    "type": "SSH",
+    "address": "ssh.example.com",
+    "username": "sshuser",
+    "password": "sshpassword",
+    "commands": [
+      {
+        "str": "ls -la",
+        "show_output": true,
+        "wait_after": 2
+      },
+      {
+        "str": "ps aux | grep python",
+        "show_output": true,
+        "wait_after": 2
+      },
+      {
+        "str": "free -m",
+        "show_output": true,
+        "wait_after": 2
+      },
+      {
+        "str": "df -h",
+        "show_output": true,
+        "wait_after": 2
+      },
+      {
+        "str": "uptime",
+        "show_output": true,
+        "wait_after": 2
+      }
+    ],
+    "simulate": true,
+    "frequency": 1,
+    "time_interval": [3600, 7200],
+    "start_time": "12:00",
+    "start_time_format": "%H:%M"
+  },
   "cmd_linux": {
     "type": "CMD",
     "commands": [

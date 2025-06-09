@@ -1,0 +1,181 @@
+{
+  "general": {
+    "profiles": ["browsing", "email", "ftp", "ssh"],
+    "scheduler": {
+      "type": "time_interval",
+      "arguments": {
+        "work_hours": {
+          "start": "09:00",
+          "end": "17:00"
+        }
+      }
+    }
+  },
+  "profiles": {
+    "browsing": {
+      "type": "http",
+      "modules": [
+        {
+          "name": "web_browsing",
+          "type": "http",
+          "websites": [
+            "https://www.example.com",
+            "https://www.wikipedia.org",
+            "https://www.python.org",
+            "https://www.github.com"
+          ],
+          "browse_time": [30, 120],
+          "scroll_min": 3,
+          "scroll_max": 10,
+          "frequency": 1,
+          "time_interval": [600, 1800],
+          "simulate": true
+        },
+        {
+          "name": "youtube_watching",
+          "type": "http",
+          "youtube_videos": [
+            "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            "https://www.youtube.com/watch?v=example123",
+            "https://www.youtube.com/watch?v=sample456"
+          ],
+          "youtube_min_watch": 60,
+          "youtube_max_watch": 180,
+          "youtube_engagement": true,
+          "frequency": 1,
+          "time_interval": [1800, 3600],
+          "simulate": true
+        }
+      ]
+    },
+    "email": {
+      "type": "email",
+      "modules": [
+        {
+          "name": "email_sending",
+          "type": "SMTP",
+          "service": "gmail",
+          "sender": "your.email@gmail.com",
+          "password": "your_app_password",
+          "receivers": ["recipient1@example.com", "recipient2@example.com"],
+          "generate_content": true,
+          "num_emails": 2,
+          "simulate": true,
+          "frequency": 1,
+          "time_interval": [1800, 3600],
+          "start_time": "11:00",
+          "start_time_format": "%H:%M"
+        },
+        {
+          "name": "email_checking",
+          "type": "IMAP",
+          "service": "gmail",
+          "username": "your.email@gmail.com",
+          "password": "your_app_password",
+          "mailbox": "INBOX",
+          "search_criteria": "UNSEEN",
+          "max_emails": 5,
+          "mark_as_read": true,
+          "check_folders": ["Sent", "Drafts", "Important"],
+          "download_attachments": true,
+          "attachments_dir": "/tmp/email_attachments",
+          "simulate": true,
+          "frequency": 1,
+          "time_interval": [900, 1800]
+        }
+      ]
+    },
+    "ftp": {
+      "type": "ftp",
+      "modules": [
+        {
+          "name": "ftp_operations",
+          "type": "ftp",
+          "address": "ftp.example.com",
+          "username": "ftpuser",
+          "password": "ftppassword",
+          "browse": ["/", "/public", "/uploads"],
+          "downloads": [
+            {
+              "path": "/public",
+              "output_dir": "/tmp/ftp_downloads",
+              "file_name": "data.txt",
+              "wait_after": 2
+            }
+          ],
+          "uploads": [
+            {
+              "path": "/uploads",
+              "input_dir": "/tmp/ftp_uploads",
+              "file_name": "report.txt",
+              "wait_after": 2
+            }
+          ],
+          "simulate": true,
+          "frequency": 1,
+          "time_interval": [3600, 7200]
+        },
+        {
+          "name": "sftp_operations",
+          "type": "ftps",
+          "address": "sftp.example.com",
+          "username": "sftpuser",
+          "password": "sftppassword",
+          "browse": ["/home/user", "/home/user/documents"],
+          "downloads": [
+            {
+              "path": "/home/user/documents",
+              "output_dir": "/tmp/sftp_downloads",
+              "file_name": "important.pdf",
+              "wait_after": 2
+            }
+          ],
+          "simulate": true,
+          "frequency": 1,
+          "time_interval": [3600, 7200]
+        }
+      ]
+    },
+    "ssh": {
+      "type": "ssh",
+      "modules": [
+        {
+          "name": "ssh_operations",
+          "type": "ssh",
+          "address": "ssh.example.com",
+          "username": "sshuser",
+          "password": "sshpassword",
+          "commands": [
+            {
+              "str": "ls -la",
+              "show_output": true,
+              "wait_after": 1
+            },
+            {
+              "str": "ps aux | grep python",
+              "show_output": true,
+              "wait_after": 1
+            },
+            {
+              "str": "free -m",
+              "show_output": true,
+              "wait_after": 1
+            },
+            {
+              "str": "df -h",
+              "show_output": true,
+              "wait_after": 1
+            },
+            {
+              "str": "uptime",
+              "show_output": true
+            }
+          ],
+          "simulate": true,
+          "frequency": 1,
+          "time_interval": [3600, 7200]
+        }
+      ]
+    }
+  }
+}
