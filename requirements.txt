@@ -1,3 +1,6 @@
-selenium
 paramiko
-webdriver-manager
+pyyaml
+psutil
+requests
+urllib3
+beautifulsoup4

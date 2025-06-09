@@ -1,33 +1,113 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
-from multiprocessing import Manager
-from .traffic_models.model_factory import ModelFactory
-from .traffic_generator import TrafficGenerator
+from datetime import datetime
+import argparse
+import sys
+import os
+import platform
+import tempfile
 from .config_loader import ConfigLoader
+from .traffic_models.model_factory import ModelFactory
 from .scheduler import Scheduler
+from .traffic_generator import TrafficGenerator
+
 
 class BenignUserProfiler(object):
-    def __init__(self, config_file_address: str, headless: bool, number_of_threads: int):
-        print("You initiated Benign Traffic Generator!")
-        self.__config_file_address = config_file_address
-        self.__headless = headless
-        self.__number_of_threads = number_of_threads
+    def __init__(self, config_file, parallel=False, work_hours=None, randomize=False):
+        self.config_file = config_file
+        self.parallel = parallel
+        self.randomize = randomize
+        self.temp_dir = tempfile.mkdtemp()
+        
+        # Handle work hours if specified
+        if work_hours:
+            # Default to 9am-5pm if not specified
+            start_time = "09:00"
+            end_time = "17:00"
+            
+            # Check if work hours are specified in format HH:MM-HH:MM
+            if isinstance(work_hours, str):
+                try:
+                    work_hours_parts = work_hours.split("-")
+                    if len(work_hours_parts) == 2:
+                        start_time = work_hours_parts[0].strip()
+                        end_time = work_hours_parts[1].strip()
+                except:
+                    pass
+                    
+            self.work_hours = {
+                "start": start_time,
+                "end": end_time
+            }
+        else:
+            self.work_hours = None
 
-    def run(self):
-        print(f"> Reading traffics configs from {self.__config_file_address}...")
-        config_loader = ConfigLoader(self.__config_file_address)
-        traffics_models = []
-        print("> Creating traffic models based on the configs...")
-        model_factory = ModelFactory(self.__headless)
+    def run(self) -> None:
+        try:
+            # Load configuration file
+            config = ConfigLoader().load(self.config_file)
+            if not config:
+                return
+                
+            # Apply work hours to all models if specified
+            if self.work_hours:
+                for model_config in config.values():
+                    model_config["work_hours"] = self.work_hours
+                    
+            # Apply randomization if specified
+            if self.randomize:
+                for model_config in config.values():
+                    model_config["randomize"] = True
+                    
+            # Create the model factory, scheduler, and generator
+            model_factory = ModelFactory(headless=False)  # Headless parameter is ignored now
+            scheduler = Scheduler()
+            generator = TrafficGenerator()
 
-        for traffic_config in config_loader.traffics_configs:
-            traffic_model = model_factory.create_model(traffic_config)
-            if traffic_model is not None:
-                traffics_models.append(traffic_model)
+            # Create models
+            for name, model_config in config.items():
+                model = model_factory.create_model(model_config)
+                if model:
+                    scheduler.add_model(model)
 
-        print("> Scheduling the tasks...")
-        scheduler = Scheduler(traffics_models)
-        print("> Starting to generate traffics...")
-        traffic_generator = TrafficGenerator(scheduler, self.__number_of_threads)
-        traffic_generator.start()
-        print("> All traffics has generated!")
+            # Determine execution method based on user choice
+            if self.parallel:
+                generator.generate_parallel(scheduler)
+            else:
+                generator.generate_sequential(scheduler)
+        except Exception as e:
+            print(f">>> Error in BenignUserProfiler. {e}")
+
+
+def main():
+    print(f"""
+    *****************************************************************************
+    *                                                                           *
+    *                      Benign User Profiler (BUP)                           *
+    *                                                                           *
+    *         A tool for generating realistic user traffic patterns             *
+    *                                                                           *
+    *****************************************************************************
+    
+    Running on: {platform.system()} {platform.release()}
+    Python version: {platform.python_version()}
+    Current time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+    """)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", "-c", help="Config file path", default=os.path.join(os.path.dirname(__file__), "config.json"))
+    parser.add_argument("--parallel", "-p", help="Run tasks in parallel", action="store_true")
+    parser.add_argument("--work-hours", "-w", help="Set work hours (e.g. '09:00-17:00') or use default 9am-5pm if no value provided", nargs="?", const=True)
+    parser.add_argument("--randomize", "-r", help="Randomize task execution", action="store_true")
+    args = parser.parse_args()
+
+    profiler = BenignUserProfiler(args.config, args.parallel, args.work_hours, args.randomize)
+    profiler.run()
+
+    # Check if there are any scheduled tasks
+    if len(sys.argv) == 1:
+        print("No arguments provided. Use -h or --help to see available options.")
+
+
+if __name__ == "__main__":
+    main()

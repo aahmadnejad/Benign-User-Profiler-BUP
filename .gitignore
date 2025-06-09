@@ -2,3 +2,8 @@ build
 dist
 *egg*
 *.swp*
+test_*
+run_bup.py
+CHANGES.md
+INSTALL.md
+example.py
