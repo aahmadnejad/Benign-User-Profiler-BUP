@@ -13,19 +13,18 @@ from .traffic_generator import TrafficGenerator
 
 
 class BenignUserProfiler(object):
-    def __init__(self, config_file, parallel=False, work_hours=None, randomize=False):
+    def __init__(self, config_file, parallel=False, work_hours=None, randomize=False, headless=False, simulate=False):
         self.config_file = config_file
         self.parallel = parallel
         self.randomize = randomize
+        self.headless = headless
+        self.simulate = simulate
         self.temp_dir = tempfile.mkdtemp()
         
-        # Handle work hours if specified
         if work_hours:
-            # Default to 9am-5pm if not specified
             start_time = "09:00"
             end_time = "17:00"
             
-            # Check if work hours are specified in format HH:MM-HH:MM
             if isinstance(work_hours, str):
                 try:
                     work_hours_parts = work_hours.split("-")
@@ -44,33 +43,31 @@ class BenignUserProfiler(object):
 
     def run(self) -> None:
         try:
-            # Load configuration file
             config = ConfigLoader().load(self.config_file)
             if not config:
                 return
                 
-            # Apply work hours to all models if specified
             if self.work_hours:
                 for model_config in config.values():
                     model_config["work_hours"] = self.work_hours
                     
-            # Apply randomization if specified
             if self.randomize:
                 for model_config in config.values():
                     model_config["randomize"] = True
+            
+            if self.simulate:
+                for model_config in config.values():
+                    model_config["simulate"] = True
                     
-            # Create the model factory, scheduler, and generator
-            model_factory = ModelFactory(headless=False)  # Headless parameter is ignored now
+            model_factory = ModelFactory(headless=self.headless)
             scheduler = Scheduler()
             generator = TrafficGenerator()
 
-            # Create models
             for name, model_config in config.items():
                 model = model_factory.create_model(model_config)
                 if model:
                     scheduler.add_model(model)
 
-            # Determine execution method based on user choice
             if self.parallel:
                 generator.generate_parallel(scheduler)
             else:
@@ -99,12 +96,20 @@ def main():
     parser.add_argument("--parallel", "-p", help="Run tasks in parallel", action="store_true")
     parser.add_argument("--work-hours", "-w", help="Set work hours (e.g. '09:00-17:00') or use default 9am-5pm if no value provided", nargs="?", const=True)
     parser.add_argument("--randomize", "-r", help="Randomize task execution", action="store_true")
+    parser.add_argument("--headless", "-d", help="Run browsers in headless mode", action="store_true")
+    parser.add_argument("--skip-actions", "-s", help="Skip performing actual actions", action="store_true")
     args = parser.parse_args()
 
-    profiler = BenignUserProfiler(args.config, args.parallel, args.work_hours, args.randomize)
+    profiler = BenignUserProfiler(
+        config_file=args.config, 
+        parallel=args.parallel, 
+        work_hours=args.work_hours, 
+        randomize=args.randomize,
+        headless=args.headless,
+        simulate=args.skip_actions
+    )
     profiler.run()
 
-    # Check if there are any scheduled tasks
     if len(sys.argv) == 1:
         print("No arguments provided. Use -h or --help to see available options.")
 

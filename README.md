@@ -18,14 +18,17 @@ BUP is a tool for generating benign user traffic patterns for security research 
 # Features
 
 - **Multi-protocol support**: HTTP/HTTPS, SSH, FTP/SFTP, SMTP, IMAP, and command-line operations
-- **No browser dependencies**: Lightweight HTTP simulation using requests and BeautifulSoup
-- **YouTube support**: Simulate visiting YouTube, searching for videos, and watching content
-- **Media download simulation**: Download images from various sources
-- **Cloud storage integration**: Simulate Google Drive and OneDrive usage
-- **Email capabilities**: Send and receive emails via Gmail, Outlook, and other providers
-- **Application launching**: Open and interact with applications on Windows and Linux
-- **Scheduling**: Configure frequency and timing of activities with work hours restrictions
-- **Cross-platform**: Works on Linux and Windows
+- **Real Browser Support**: Interact with real Firefox browser for authentic traffic generation
+- **YouTube support**: Visit YouTube, search for videos, watch content, and interact with playback controls
+- **SoundCloud integration**: Browse and listen to music on SoundCloud
+- **Google Search**: Perform Google searches and click on search results
+- **Media download simulation**: Download images from various sources like Unsplash
+- **Email capabilities**: Send and receive emails with attachments via Gmail and other providers
+- **Application launching**: Open and interact with random applications on Windows and Linux
+- **Office document integration**: Create and save documents using Microsoft Office (Windows) or LibreOffice (Linux) for email attachments
+- **Network scanning**: Ping local network addresses to simulate network discovery
+- **Scheduling**: Configure frequency and timing of activities with work hours restrictions and optional task randomization
+- **Cross-platform**: Works on Linux and Windows with platform-specific implementations
 
 # Installation
 
@@ -43,13 +46,15 @@ python3 setup.py install
 
 # Usage
 
-To execute the program, run this command:
+## Standard Execution
+
+To execute the program with simulated traffic, run this command:
 
 ```bash
 benign-user-profiler
 ```
 
-Also, you can use `-h` to see different options of the program:
+You can use `-h` to see different options of the program:
 
 ```bash
 # Run with default config file
@@ -67,9 +72,40 @@ benign-user-profiler --work-hours
 # Run with custom work hours
 benign-user-profiler --work-hours "10:00-18:00"
 
-# Run with randomized task execution
+# Run with randomized task execution (shuffles task order regardless of start times)
 benign-user-profiler --randomize
 ```
+
+## Real Traffic Generation
+
+For realistic traffic generation with actual browser interaction, use the included script:
+
+```bash
+# Run with real browser interaction
+./run_real_traffic.sh
+
+# Run in headless mode (no visible browser windows)
+./run_real_traffic.sh --headless
+
+# Run in simulation mode (no real browser interaction)
+./run_real_traffic.sh --simulate
+```
+
+### Requirements for Real Traffic
+
+Real traffic generation has the following dependencies:
+
+#### Linux:
+- Firefox browser
+- xdotool (for keyboard/mouse simulation)
+- LibreOffice (for document creation)
+
+#### Windows:
+- Firefox browser
+- PowerShell (for application control)
+- Microsoft Office (for document creation)
+
+The `run_real_traffic.sh` script will check for these dependencies and warn you if any are missing.
 
 ## Configuration
 
@@ -103,17 +139,70 @@ The tool is configured via a JSON file (`config.json`). Here's a sample configur
     "type": "HTTP",
     "website": "youtube",
     "youtube_searches": ["python programming", "cloud computing", "machine learning"],
-    "youtube_min_watch": 10,
-    "youtube_max_watch": 60,
+    "youtube_min_watch": 60,
+    "youtube_max_watch": 180,
     "frequency": 1,
     "time_interval": [1200, 3600],
     "start_time": "10:30",
     "start_time_format": "%H:%M"
+  },
+  "soundcloud_listening": {
+    "type": "HTTP",
+    "website": "soundcloud",
+    "soundcloud_searches": ["electronic music", "ambient", "rock", "pop", "jazz"],
+    "soundcloud_min_listen": 60,
+    "soundcloud_max_listen": 300,
+    "frequency": 1,
+    "time_interval": [2400, 4800],
+    "start_time": "14:30",
+    "start_time_format": "%H:%M"
+  },
+  "random_apps": {
+    "type": "CMD",
+    "linux_apps": [
+      "gnome-calculator",
+      "gedit",
+      "nautilus"
+    ],
+    "windows_apps": [
+      "calc.exe",
+      "notepad.exe",
+      "explorer.exe"
+    ],
+    "min_apps_to_open": 2,
+    "max_apps_to_open": 4,
+    "app_use_time_min": 30,
+    "app_use_time_max": 300,
+    "frequency": 2,
+    "time_interval": [1800, 3600]
+  },
+  "microsoft_office": {
+    "type": "CMD",
+    "windows_commands": [
+      {
+        "command": "start winword",
+        "platform": "windows",
+        "description": "Open Microsoft Word",
+        "use_time": [120, 600]
+      }
+    ],
+    "create_office_docs": true,
+    "frequency": 1,
+    "time_interval": [5400, 10800]
   }
 }
 ```
 
 See `config.json` for a complete example with all supported protocols.
+
+### Task Scheduling and Randomization
+
+By default, tasks are scheduled and executed based on their start times. You can enable task randomization in two ways:
+
+1. Using the `--randomize` command-line flag: This will randomize all tasks regardless of their configured start times.
+2. Setting `"randomize": true` in individual model configurations: This allows you to control which specific tasks/models should be randomized.
+
+When randomization is enabled, tasks will be executed in a random order rather than strictly by their start times. This creates more realistic and less predictable traffic patterns.
 
 This project has been successfully tested on Ubuntu 22.04. It should work on other versions of Ubuntu OS (or even Debian OS) as long as your system has the necessary python3 packages (you can see the required packages in the `requirements.txt` file).
 
@@ -126,25 +215,34 @@ This project has been successfully tested on Ubuntu 22.04. It should work on oth
 BUP supports the following traffic models:
 
 ## HTTP/HTTPS
-- Web browsing using requests and BeautifulSoup (no browser dependencies)
-- Multi-site navigation
-- YouTube integration for simulated video watching
-- Media downloading from various sources
-- Cloud storage interaction (Google Drive, OneDrive)
+- Real browser-based web browsing using Firefox
+- Multi-site navigation with realistic scrolling and tab behavior
+- YouTube integration for watching videos with playback control (play, pause, fullscreen)
+- SoundCloud music browsing and listening
+- Google search with result clicking
+- Media downloading from sources like Unsplash
 - Configurable sublink navigation with depth control
+- Human-like behavior with realistic timing between actions
 - Work hours restrictions for realistic usage patterns
 
 ## Email
 - SMTP for sending emails
 - IMAP for receiving emails
 - Support for Gmail, Outlook, and other providers
-- Attachment handling
+- Attachment handling with generated Microsoft Office documents
+- Automated email generation with realistic content
 
 ## Command Line
 - Execute system commands
 - Platform-specific command execution (Windows/Linux)
-- Launch applications
-- Simple application interactions
+- Launch and interact with random applications
+- Office document creation:
+  - Microsoft Office (Word, Excel, PowerPoint) on Windows
+  - LibreOffice (Writer, Calc, Impress) on Linux
+- Lorem Ipsum content generation for documents
+- Network scanning with ping
+- Simulated keyboard input for realistic app interaction
+- Application lifecycle management (opening, using, closing)
 
 ## SSH
 - Connect to remote servers

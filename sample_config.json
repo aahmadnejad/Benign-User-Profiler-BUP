@@ -1,13 +1,14 @@
 {
   "general": {
-    "profiles": ["browsing", "email", "ftp", "ssh"],
+    "profiles": ["browsing", "email", "ftp", "ssh", "desktop"],
     "scheduler": {
       "type": "time_interval",
       "arguments": {
         "work_hours": {
           "start": "09:00",
           "end": "17:00"
-        }
+        },
+        "randomize": true
       }
     }
   },
@@ -19,7 +20,7 @@
           "name": "web_browsing",
           "type": "http",
           "websites": [
-            "https://www.example.com",
+            "https://www.yorku.ca",
             "https://www.wikipedia.org",
             "https://www.python.org",
             "https://www.github.com"
@@ -29,7 +30,8 @@
           "scroll_max": 10,
           "frequency": 1,
           "time_interval": [600, 1800],
-          "simulate": true
+          "randomize": true,
+          "simulate": false
         },
         {
           "name": "youtube_watching",
@@ -44,7 +46,7 @@
           "youtube_engagement": true,
           "frequency": 1,
           "time_interval": [1800, 3600],
-          "simulate": true
+          "simulate": false
         }
       ]
     },
@@ -60,7 +62,7 @@
           "receivers": ["recipient1@example.com", "recipient2@example.com"],
           "generate_content": true,
           "num_emails": 2,
-          "simulate": true,
+          "simulate": false,
           "frequency": 1,
           "time_interval": [1800, 3600],
           "start_time": "11:00",
@@ -79,7 +81,7 @@
           "check_folders": ["Sent", "Drafts", "Important"],
           "download_attachments": true,
           "attachments_dir": "/tmp/email_attachments",
-          "simulate": true,
+          "simulate": false,
           "frequency": 1,
           "time_interval": [900, 1800]
         }
@@ -111,7 +113,7 @@
               "wait_after": 2
             }
           ],
-          "simulate": true,
+          "simulate": false,
           "frequency": 1,
           "time_interval": [3600, 7200]
         },
@@ -130,7 +132,7 @@
               "wait_after": 2
             }
           ],
-          "simulate": true,
+          "simulate": false,
           "frequency": 1,
           "time_interval": [3600, 7200]
         }
@@ -171,9 +173,131 @@
               "show_output": true
             }
           ],
-          "simulate": true,
+          "simulate": false,
           "frequency": 1,
           "time_interval": [3600, 7200]
+        }
+      ]
+    },
+    "desktop": {
+      "type": "cmd",
+      "modules": [
+        {
+          "name": "random_apps",
+          "type": "CMD",
+          "linux_apps": [
+            "gnome-calculator",
+            "gedit",
+            "gnome-terminal",
+            "nautilus",
+            "gnome-software",
+            "gnome-system-monitor",
+            "evince",
+            "file-roller"
+          ],
+          "windows_apps": [
+            "calc.exe",
+            "notepad.exe",
+            "cmd.exe",
+            "explorer.exe",
+            "control.exe",
+            "taskmgr.exe",
+            "mspaint.exe",
+            "wordpad.exe"
+          ],
+          "min_apps_to_open": 2,
+          "max_apps_to_open": 4,
+          "app_use_time_min": 30,
+          "app_use_time_max": 300,
+          "frequency": 2,
+          "time_interval": [1800, 3600],
+          "start_time": "09:15",
+          "start_time_format": "%H:%M",
+          "work_hours": {
+            "start": "09:00",
+            "end": "17:00"
+          }
+        },
+        {
+          "name": "microsoft_office",
+          "type": "CMD",
+          "windows_commands": [
+            {
+              "command": "start winword",
+              "platform": "windows",
+              "description": "Open Microsoft Word",
+              "show_output": false,
+              "use_time": [120, 600]
+            },
+            {
+              "command": "start excel",
+              "platform": "windows",
+              "description": "Open Microsoft Excel",
+              "show_output": false,
+              "use_time": [120, 600]
+            }
+          ],
+          "linux_commands": [
+            {
+              "command": "libreoffice --writer",
+              "platform": "linux",
+              "description": "Open LibreOffice Writer",
+              "show_output": false,
+              "use_time": [120, 600]
+            },
+            {
+              "command": "libreoffice --calc",
+              "platform": "linux",
+              "description": "Open LibreOffice Calc",
+              "show_output": false,
+              "use_time": [120, 600]
+            }
+          ],
+          "create_office_docs": true,
+          "frequency": 1,
+          "time_interval": [5400, 10800],
+          "start_time": "10:45",
+          "start_time_format": "%H:%M",
+          "work_hours": {
+            "start": "09:00",
+            "end": "17:00"
+          }
+        },
+        {
+          "name": "ping_scan",
+          "type": "CMD",
+          "commands": [
+            {
+              "command": "ping -c 3 192.168.1.1",
+              "platform": "linux",
+              "show_output": true,
+              "wait_after": 2
+            },
+            {
+              "command": "for i in {1..10}; do ping -c 1 -W 1 192.168.1.$i; done",
+              "platform": "linux",
+              "show_output": true,
+              "wait_after": 5
+            }
+          ],
+          "windows_commands": [
+            {
+              "command": "ping 192.168.1.1",
+              "platform": "windows",
+              "show_output": true,
+              "wait_after": 2
+            },
+            {
+              "command": "for /L %i in (1,1,10) do @ping -n 1 -w 1000 192.168.1.%i",
+              "platform": "windows",
+              "show_output": true,
+              "wait_after": 5
+            }
+          ],
+          "frequency": 1,
+          "time_interval": [3600, 7200],
+          "start_time": "11:00",
+          "start_time_format": "%H:%M"
         }
       ]
     }

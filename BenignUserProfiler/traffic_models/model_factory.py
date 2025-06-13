@@ -18,8 +18,8 @@ class ModelFactory(object):
         model: TrafficModel
         
         if model_type == "HTTP" or model_type == "HTTPS":
-            # HTTP model no longer uses Selenium, so no browser initialization needed
-            model = HTTPModel()
+            # Initialize HTTP model with real browser
+            model = HTTPModel(headless=self.headless)
                 
         elif model_type == "SSH":
             model = SSHModel()

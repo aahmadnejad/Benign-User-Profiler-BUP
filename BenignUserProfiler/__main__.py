@@ -11,6 +11,8 @@ def args_parser() -> argparse.ArgumentParser:
     parser.add_argument('-w', '--work-hours', nargs='?', const=True, help='Set work hours (e.g. "09:00-17:00") or use default 9am-5pm if no value provided.')
     parser.add_argument('-r', '--randomize', action='store_true', help='Randomize task execution.')
     parser.add_argument('-t', '--threads', action='store', help='Number of threads. default=CPU count')
+    parser.add_argument('-d', '--headless', action='store_true', help='Run browsers in headless mode.')
+    parser.add_argument('-s', '--skip-actions', action='store_true', help='Skip performing actual actions.')
     return parser
 
 
@@ -20,6 +22,8 @@ def main():
     parallel = parsed_arguments.parallel
     work_hours = parsed_arguments.work_hours
     randomize = parsed_arguments.randomize
+    headless = parsed_arguments.headless
+    simulate = parsed_arguments.skip_actions
     number_of_threads = cpu_count() if parsed_arguments.threads is None else int(parsed_arguments.threads)
     
     # Create profiler instance with new parameters
@@ -27,7 +31,9 @@ def main():
         config_file=config_file_address,
         parallel=parallel,
         work_hours=work_hours,
-        randomize=randomize
+        randomize=randomize,
+        headless=headless,
+        simulate=simulate
     )
     benign_user_profiler.run()
 
