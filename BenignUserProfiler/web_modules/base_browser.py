@@ -89,7 +89,21 @@ class BaseBrowserModule(ABC):
                 ps_script = f'''
                 Add-Type -AssemblyName System.Windows.Forms
                 [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point({x}, {y})
-                [System.Windows.Forms.MouseButtons]::Click("Left")
+                $mouse = New-Object System.Windows.Forms.MouseButtons
+                $mouse_event = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)
+                [System.Windows.Forms.Application]::DoEvents()
+                
+                # Simulate mouse down and up events
+                $signature = @'
+                [DllImport("user32.dll",CharSet=CharSet.Auto, CallingConvention=CallingConvention.StdCall)]
+                public static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint cButtons, uint dwExtraInfo);
+                '@
+                $SendMouseClick = Add-Type -memberDefinition $signature -name "Win32MouseEventNew" -namespace Win32Functions -passThru
+                
+                # Left mouse button down and up
+                $SendMouseClick::mouse_event(0x00000002, 0, 0, 0, 0) # MOUSEEVENTF_LEFTDOWN
+                Start-Sleep -Milliseconds 10
+                $SendMouseClick::mouse_event(0x00000004, 0, 0, 0, 0) # MOUSEEVENTF_LEFTUP
                 '''
                 subprocess.run(["powershell", "-Command", ps_script], 
                             shell=True,
@@ -111,7 +125,19 @@ class BaseBrowserModule(ABC):
                 ps_script = f'''
                 Add-Type -AssemblyName System.Windows.Forms
                 [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point({x}, {y})
-                [System.Windows.Forms.MouseButtons]::Click("Right")
+                [System.Windows.Forms.Application]::DoEvents()
+                
+                # Simulate mouse down and up events
+                $signature = @'
+                [DllImport("user32.dll",CharSet=CharSet.Auto, CallingConvention=CallingConvention.StdCall)]
+                public static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint cButtons, uint dwExtraInfo);
+                '@
+                $SendMouseClick = Add-Type -memberDefinition $signature -name "Win32MouseEventRight" -namespace Win32Functions -passThru
+                
+                # Right mouse button down and up
+                $SendMouseClick::mouse_event(0x00000008, 0, 0, 0, 0) # MOUSEEVENTF_RIGHTDOWN
+                Start-Sleep -Milliseconds 10
+                $SendMouseClick::mouse_event(0x00000010, 0, 0, 0, 0) # MOUSEEVENTF_RIGHTUP
                 '''
                 subprocess.run(["powershell", "-Command", ps_script], 
                             shell=True,
@@ -130,9 +156,29 @@ class BaseBrowserModule(ABC):
                             stdout=subprocess.DEVNULL, 
                             stderr=subprocess.DEVNULL)
             elif self.os_type == "Windows":
+                # Map common key names to SendKeys format
+                key_mapping = {
+                    "Return": "{ENTER}",
+                    "Escape": "{ESC}",
+                    "Page_Down": "{PGDN}",
+                    "Page_Up": "{PGUP}",
+                    "Right": "{RIGHT}",
+                    "Left": "{LEFT}",
+                    "Up": "{UP}",
+                    "Down": "{DOWN}",
+                    "space": " ",
+                    "alt+Left": "%{LEFT}",
+                    "alt+F4": "%{F4}"
+                }
+                
+                # Convert key to SendKeys format if it's in our mapping
+                send_key = key_mapping.get(key, key)
+                
                 ps_script = f'''
                 Add-Type -AssemblyName System.Windows.Forms
-                [System.Windows.Forms.SendKeys]::SendWait("{key}")
+                [System.Windows.Forms.Application]::DoEvents()
+                [System.Windows.Forms.SendKeys]::SendWait("{send_key}")
+                Start-Sleep -Milliseconds 100
                 '''
                 subprocess.run(["powershell", "-Command", ps_script], 
                             shell=True,
@@ -154,11 +200,33 @@ class BaseBrowserModule(ABC):
                 except:
                     pass
             elif self.os_type == "Windows":
+                # Method 1: SendKeys for Page Down
                 ps_script = '''
                 Add-Type -AssemblyName System.Windows.Forms
+                [System.Windows.Forms.Application]::DoEvents()
                 [System.Windows.Forms.SendKeys]::SendWait("{PGDN}")
+                Start-Sleep -Milliseconds 100
                 '''
                 subprocess.run(["powershell", "-Command", ps_script], 
+                            shell=True,
+                            stdout=subprocess.DEVNULL, 
+                            stderr=subprocess.DEVNULL)
+                
+                # Method 2: Alternative approach - simulate mouse wheel
+                ps_script2 = '''
+                Add-Type -AssemblyName System.Windows.Forms
+                
+                # Simulate mouse wheel scroll
+                $signature = @'
+                [DllImport("user32.dll",CharSet=CharSet.Auto, CallingConvention=CallingConvention.StdCall)]
+                public static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint cButtons, uint dwExtraInfo);
+                '@
+                $SendMouseEvent = Add-Type -memberDefinition $signature -name "Win32MouseEventScroll" -namespace Win32Functions -passThru
+                
+                # Scroll down (negative value scrolls down)
+                $SendMouseEvent::mouse_event(0x00000800, 0, 0, 0xFFFFFF88, 0) # MOUSEEVENTF_WHEEL
+                '''
+                subprocess.run(["powershell", "-Command", ps_script2], 
                             shell=True,
                             stdout=subprocess.DEVNULL, 
                             stderr=subprocess.DEVNULL)
