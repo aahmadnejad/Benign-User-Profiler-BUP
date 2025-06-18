@@ -47,10 +47,10 @@ class YoutubeModule(BaseBrowserModule):
             # Wait for video to load and start playing
             time.sleep(random.uniform(5, 10))
             
-            # Determine how long to watch
+            # Determine how long to watch (30 minutes by default)
             watch_time = random.randint(
-                config.get("youtube_min_watch", 60),
-                config.get("youtube_max_watch", 300)
+                config.get("youtube_min_watch", 1800),  # 30 min in seconds
+                config.get("youtube_max_watch", 1800)   # 30 min in seconds
             )
             
             print(f">>> Watching video for {watch_time} seconds")

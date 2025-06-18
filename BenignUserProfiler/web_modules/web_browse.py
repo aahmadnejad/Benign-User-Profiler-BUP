@@ -38,10 +38,10 @@ class WebBrowseModule(BaseBrowserModule):
         # Initial page load
         time.sleep(random.uniform(2, 5))
         
-        # Determine how long to browse
+        # Determine how long to browse (30 minutes by default)
         browse_time = random.randint(
-            config.get("min_browse_time", 30),
-            config.get("max_browse_time", 300)
+            config.get("min_browse_time", 1800),  # 30 min in seconds
+            config.get("max_browse_time", 1800)  # 30 min in seconds
         )
         
         start_time = time.time()
@@ -49,56 +49,110 @@ class WebBrowseModule(BaseBrowserModule):
         
         print(f">>> Will browse for approximately {browse_time} seconds")
         
-        # Click around the page periodically
+        # Initialize a list to track visited URLs within this session
+        visited_urls_in_session = []
+        if isinstance(url, str):
+            visited_urls_in_session.append(url)
+        
+        # Click around the page periodically with more random interactions
         while elapsed_time < browse_time:
-            # Scroll down
-            scroll_amount = random.randint(1, 3)
-            print(f">>> Scrolling down {scroll_amount} times")
-            self.scroll_down(scroll_amount)
+            # Randomly decide what to do next
+            action = random.choices(
+                ["scroll", "click", "open_new_link", "go_back", "refresh"], 
+                weights=[0.4, 0.3, 0.2, 0.05, 0.05], 
+                k=1
+            )[0]
+            
+            if action == "scroll":
+                # More scrolling with varied amounts
+                scroll_amount = random.randint(1, 5)
+                print(f">>> Scrolling down {scroll_amount} times")
+                self.scroll_down(scroll_amount)
+                
+            elif action == "click" and config.get("click_elements", True):
+                # Try clicking at positions where links or buttons might be
+                click_positions = [
+                    (random.randint(300, 700), random.randint(200, 600)),  # Random position
+                    (random.randint(400, 600), random.randint(300, 500)),  # Another random position
+                    (400, 400),  # Center
+                    (300, 200),  # Upper navigation
+                    (500, 300),  # Content area
+                    (300, 700),  # Bottom navigation
+                    (400, 600),  # Lower content
+                    (100, 200)   # Sidebar/menu
+                ]
+                
+                pos = random.choice(click_positions)
+                print(f">>> Clicking at position {pos}")
+                self.click(pos[0], pos[1])
+                
+                # Wait for page to respond to click
+                click_wait = random.uniform(3, 8)
+                elapsed_time += click_wait
+                time.sleep(click_wait)
+                
+                # Check if the page changed (simulate by random chance)
+                if random.random() < 0.6:  # 60% chance we clicked a link
+                    print(">>> Page appears to have changed, waiting for load")
+                    load_wait = random.uniform(2, 5)
+                    elapsed_time += load_wait
+                    time.sleep(load_wait)
+                    
+                    # Simulate adding a new URL to our history
+                    current_url = f"{url}/page_{random.randint(1, 100)}"
+                    visited_urls_in_session.append(current_url)
+                    print(f">>> Now viewing: {current_url}")
+            
+            elif action == "open_new_link" and config.get("visit_sublinks", {}).get("enabled", True):
+                # Simulate opening a new URL on the same site
+                base_url = url
+                if isinstance(base_url, dict) and "url" in base_url:
+                    base_url = base_url["url"]
+                
+                # Generate a plausible sublink
+                subpaths = ["about", "products", "services", "contact", "blog", "news", 
+                           "faq", "support", "login", "register", "article", "category"]
+                new_url = f"{base_url}/{random.choice(subpaths)}"
+                
+                print(f">>> Opening new URL: {new_url}")
+                if self.browser_command(new_url):
+                    visited_urls_in_session.append(new_url)
+                    # Wait for page to load
+                    load_wait = random.uniform(5, 10)
+                    elapsed_time += load_wait
+                    time.sleep(load_wait)
+            
+            elif action == "go_back" and len(visited_urls_in_session) > 1:
+                print(">>> Going back to previous page")
+                self.press_key("alt+Left")
+                back_wait = random.uniform(2, 5)
+                elapsed_time += back_wait
+                time.sleep(back_wait)
+                
+                # Update our simulated history
+                if len(visited_urls_in_session) > 1:
+                    visited_urls_in_session.pop()
+                    print(f">>> Returned to: {visited_urls_in_session[-1]}")
+            
+            elif action == "refresh":
+                print(">>> Refreshing page")
+                # Press F5 to refresh
+                self.press_key("F5")
+                refresh_wait = random.uniform(3, 7)
+                elapsed_time += refresh_wait
+                time.sleep(refresh_wait)
             
             # Random wait between actions
             wait_time = random.uniform(5, 15)
             elapsed_time += wait_time
             time.sleep(wait_time)
             
-            if elapsed_time >= browse_time:
-                break
-                
-            # Click on a random element if configured
-            if config.get("click_elements", True):
-                if random.random() < 0.7:  # 70% chance to click
-                    # Try clicking at positions where links or buttons might be
-                    click_positions = [
-                        (random.randint(300, 700), random.randint(200, 600)),  # Random position
-                        (400, 400),  # Center
-                        (300, 700),  # Upper right (often navigation)
-                        (400, 600),  # Upper left (often logo/home)
-                        (400, 500)   # Bottom center (often pagination/footer)
-                    ]
-                    
-                    pos = random.choice(click_positions)
-                    print(f">>> Clicking at position {pos}")
-                    self.click(pos[0], pos[1])
-                    
-                    # Wait for page to respond to click
-                    click_wait = random.uniform(3, 8)
-                    elapsed_time += click_wait
-                    time.sleep(click_wait)
-                    
-                    # If we might have navigated to a new page, give it time to load
-                    if random.random() < 0.5:  # 50% chance we clicked a link
-                        print(">>> Page may have changed, waiting for load")
-                        load_wait = random.uniform(2, 5)
-                        elapsed_time += load_wait
-                        time.sleep(load_wait)
-                        
-                        # Go back if we want to return to the original page
-                        if random.random() < 0.7:  # 70% chance to go back
-                            print(">>> Going back to previous page")
-                            self.press_key("alt+Left")
-                            back_wait = random.uniform(2, 5)
-                            elapsed_time += back_wait
-                            time.sleep(back_wait)
+            # Show browsing statistics periodically
+            if random.random() < 0.2:  # 20% chance
+                print(f">>> Browsing stats: {len(visited_urls_in_session)} pages visited, {elapsed_time:.1f} seconds elapsed")
+                remaining = browse_time - elapsed_time
+                if remaining > 0:
+                    print(f">>> Approximately {remaining:.1f} seconds remaining in browsing session")
             
             elapsed_time = time.time() - start_time
         

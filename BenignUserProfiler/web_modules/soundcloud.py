@@ -86,10 +86,10 @@ class SoundcloudModule(BaseBrowserModule):
             print(">>> Track should be playing now")
             time.sleep(5)
             
-            # Get listening time
+            # Get listening time (30 minutes by default)
             listen_time = random.randint(
-                config.get("soundcloud_min_listen", 60),
-                config.get("soundcloud_max_listen", 300)
+                config.get("soundcloud_min_listen", 1800),  # 30 min in seconds
+                config.get("soundcloud_max_listen", 1800)  # 30 min in seconds
             )
             
             print(f">>> Listening to music for {listen_time} seconds")

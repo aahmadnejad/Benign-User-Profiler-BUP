@@ -150,7 +150,7 @@ class SMTPModel(TrafficModel):
         sender = self.model_config["sender"].lower()
         if "gmail" in sender:
             return "gmail"
-        elif "outlook" in sender or "hotmail" in sender or "live" in sender:
+        elif "outlook" in sender or "hotmail" in sender or "live" in sender or "office365" in sender:
             return "outlook"
         elif "yahoo" in sender:
             return "yahoo"
@@ -296,10 +296,16 @@ class SMTPModel(TrafficModel):
                 return
                 
             # Login and send
+            print(f">>> Logging in to email server as {sender}")
             server.login(sender, password)
+            
+            print(f">>> Preparing to send email to {len(selected_receivers)} recipients")
             text = message.as_string()
+            
+            # Send the email
+            print(f">>> Sending email: {email_data['subject']}")
             server.sendmail(sender, selected_receivers, text)
-            print(f">>> Email sent: {email_data['subject']} to {len(selected_receivers)} recipients")
+            print(f">>> Email successfully sent: {email_data['subject']} to {len(selected_receivers)} recipients")
         except Exception as e:
             print(f">>> Error sending email: {e}")
 
@@ -607,7 +613,7 @@ class IMAPModel(TrafficModel):
         username = self.model_config["username"].lower()
         if "gmail" in username:
             return "gmail"
-        elif "outlook" in username or "hotmail" in username or "live" in username:
+        elif "outlook" in username or "hotmail" in username or "live" in username or "office365" in username:
             return "outlook"
         elif "yahoo" in username:
             return "yahoo"

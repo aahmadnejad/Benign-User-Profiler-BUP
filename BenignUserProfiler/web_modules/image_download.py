@@ -9,6 +9,11 @@ from .base_browser import BaseBrowserModule
 
 class ImageDownloadModule(BaseBrowserModule):
     def execute(self, config):
+        # Check if direct URL download is specified
+        if "download_urls" in config:
+            return self._download_from_urls(config)
+        
+        # Otherwise use standard approach
         download_sources = config.get("download_sources", [
             "https://www.pexels.com",
             "https://pixabay.com",
@@ -215,4 +220,87 @@ class ImageDownloadModule(BaseBrowserModule):
         
         # Close browser when done
         self.close_browser()
+        return True
+        
+    def _download_from_urls(self, config):
+        """Download media directly from URLs without browser interaction"""
+        download_urls = config.get("download_urls", [])
+        if not download_urls:
+            print(">>> No download URLs provided")
+            return False
+            
+        # Create output directory if it doesn't exist
+        output_dir = os.path.expanduser("~/output-benign/media_downloads")
+        os.makedirs(output_dir, exist_ok=True)
+        
+        print(f">>> Found {len(download_urls)} URLs to download")
+        successful_downloads = 0
+        
+        for i, url in enumerate(download_urls):
+            try:
+                print(f">>> Downloading file {i+1}/{len(download_urls)}: {url}")
+                
+                # Extract filename from URL or generate one
+                filename = os.path.basename(url)
+                if not filename or "?" in filename or len(filename) < 4:
+                    # Generate a random filename with extension based on URL
+                    if ".jpg" in url.lower() or ".jpeg" in url.lower():
+                        ext = ".jpg"
+                    elif ".png" in url.lower():
+                        ext = ".png"
+                    elif ".gif" in url.lower():
+                        ext = ".gif"
+                    elif ".mp4" in url.lower() or ".mov" in url.lower():
+                        ext = ".mp4"
+                    elif ".mp3" in url.lower() or ".wav" in url.lower():
+                        ext = ".mp3"
+                    elif ".pdf" in url.lower():
+                        ext = ".pdf"
+                    else:
+                        ext = ".bin"
+                    
+                    filename = f"download_{int(time.time())}_{i}{ext}"
+                
+                file_path = os.path.join(output_dir, filename)
+                
+                # Download the file with progress updates
+                response = requests.get(url, stream=True)
+                if response.status_code == 200:
+                    total_size = int(response.headers.get('content-length', 0))
+                    downloaded = 0
+                    
+                    with open(file_path, 'wb') as f:
+                        start_time = time.time()
+                        for chunk in response.iter_content(chunk_size=8192):
+                            if chunk:
+                                f.write(chunk)
+                                downloaded += len(chunk)
+                                
+                                # Show progress periodically
+                                if total_size > 0 and downloaded % 524288 == 0:  # Show every 512KB
+                                    percent = (downloaded / total_size) * 100
+                                    elapsed = time.time() - start_time
+                                    if elapsed > 0:
+                                        speed = downloaded / (1024 * elapsed)
+                                        print(f">>> Progress: {percent:.1f}% ({downloaded/1024/1024:.1f} MB) - {speed:.1f} KB/s")
+                    
+                    download_time = time.time() - start_time
+                    print(f">>> Successfully downloaded {filename} ({os.path.getsize(file_path)/1024/1024:.2f} MB in {download_time:.1f} seconds)")
+                    successful_downloads += 1
+                    
+                    # Simulate examining the downloaded file
+                    time.sleep(random.uniform(1, 3))
+                else:
+                    print(f">>> Failed to download: HTTP {response.status_code}")
+                
+                # Wait between downloads
+                if i < len(download_urls) - 1:
+                    wait_time = random.uniform(2, 5)
+                    print(f">>> Waiting {wait_time:.1f} seconds before next download...")
+                    time.sleep(wait_time)
+                    
+            except Exception as e:
+                print(f">>> Error downloading {url}: {e}")
+        
+        print(f">>> Media download complete. Successfully downloaded {successful_downloads}/{len(download_urls)} files to {output_dir}")
         return True
