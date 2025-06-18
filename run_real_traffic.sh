@@ -4,6 +4,7 @@
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
+BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 echo -e "${GREEN}=======================================================${NC}"
@@ -16,6 +17,10 @@ echo -e "${YELLOW}  --simulate     Run in simulation mode (no real browser inter
 echo -e "${YELLOW}  --randomize    Randomize task execution order${NC}"
 echo -e "${YELLOW}  --auto-install Install required dependencies automatically${NC}"
 echo -e "${YELLOW}  --debug        Show more detailed debug information${NC}"
+echo -e "${YELLOW}  --verbose      Show all output including browser operations${NC}"
+echo -e "${GREEN}=======================================================${NC}"
+echo -e "${BLUE}Important: For scrolling and clicking to work properly, install pyautogui:${NC}"
+echo -e "${BLUE}    pip install pyautogui${NC}"
 echo -e "${GREEN}=======================================================${NC}"
 
 # Detect OS
@@ -46,6 +51,7 @@ fi
 # Parse arguments early to check for auto-install
 AUTO_INSTALL=0
 DEBUG=0
+VERBOSE=0
 HEADLESS=0
 SIMULATE=0
 RANDOMIZE=0
@@ -57,6 +63,9 @@ for arg in "$@"; do
             ;;
         --debug)
             DEBUG=1
+            ;;
+        --verbose)
+            VERBOSE=1
             ;;
     esac
 done
@@ -119,15 +128,32 @@ install_python_packages() {
     if [ -f requirements.txt ]; then
         pip install -r requirements.txt
     else
-        # Install core requirements
-        pip install requests selenium bs4 psutil
+        # Install core requirements including pyautogui for browser automation
+        pip install requests selenium bs4 psutil pyautogui
+    fi
+    
+    # Always try to install pyautogui (critical for browser interaction)
+    echo -e "${GREEN}Installing PyAutoGUI for cross-platform browser automation...${NC}"
+    pip install pyautogui
+    
+    # Install additional dependencies based on OS
+    if [ "$OS_TYPE" == "Windows" ]; then
+        echo -e "${GREEN}Installing Windows-specific dependencies...${NC}"
+        pip install pywin32
+    elif [ "$OS_TYPE" == "Linux" ]; then
+        # Check for Linux-specific dependencies
+        if ! python -c "import Xlib" &>/dev/null; then
+            echo -e "${GREEN}Installing Linux X11 dependencies for PyAutoGUI...${NC}"
+            pip install python-xlib
+        fi
     fi
     
     if [ $? -eq 0 ]; then
         echo -e "${GREEN}Python package installation successful${NC}"
     else
         echo -e "${RED}Python package installation failed${NC}"
-        exit 1
+        # Don't exit on failure, try to continue
+        echo -e "${YELLOW}Will attempt to continue despite package installation issues${NC}"
     fi
 }
 
@@ -281,6 +307,18 @@ fi
 if [ $DEBUG -eq 1 ]; then
     echo -e "${GREEN}Running in DEBUG mode${NC}"
     CMD="$CMD --debug"
+    
+    # Set the Python debug environment variable
+    export PYTHONDEVMODE=1
+    export PYTHONUTF8=1
+fi
+
+# Set verbose flag if requested
+if [ $VERBOSE -eq 1 ]; then
+    echo -e "${GREEN}Running in VERBOSE mode${NC}"
+    export PYTHONVERBOSE=1
+    # Don't redirect stdout/stderr to null for better debugging
+    export BUP_VERBOSE=1
 fi
 
 # Execute the command

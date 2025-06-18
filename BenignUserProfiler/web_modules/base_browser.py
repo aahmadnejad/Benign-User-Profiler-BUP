@@ -5,12 +5,35 @@ import subprocess
 import time
 import random
 import os
+import sys
 from abc import ABC, abstractmethod
+
+# Add debug flag for detailed logging
+DEBUG = os.environ.get("PYTHONDEVMODE", "0") == "1"
+VERBOSE = os.environ.get("BUP_VERBOSE", "0") == "1"
 
 class BaseBrowserModule(ABC):
     def __init__(self, headless=False):
         self.headless = headless
         self.os_type = platform.system()
+        
+        # Detect Windows environment more precisely
+        if self.os_type == "Windows" or "win" in sys.platform.lower():
+            self.os_type = "Windows"
+        
+        # Print system info for debugging
+        print(f">>> OS detected: {self.os_type}")
+        print(f">>> Platform: {platform.platform()}")
+        print(f">>> Python: {sys.version}")
+        
+        # Check if selenium is available (for fallback)
+        try:
+            import selenium
+            self.has_selenium = True
+            print(">>> Selenium is available")
+        except ImportError:
+            self.has_selenium = False
+            print(">>> Selenium is not available, using fallback methods")
     
     def browser_command(self, url, additional_args=None):
         try:
@@ -183,59 +206,165 @@ class BaseBrowserModule(ABC):
     
     def click(self, x, y):
         try:
+            print(f">>> Attempting to click at position ({x}, {y})")
+            
+            # Try selenium first if available
+            if hasattr(self, 'has_selenium') and self.has_selenium:
+                try:
+                    # Try to use selenium's direct browser interaction
+                    from selenium import webdriver
+                    from selenium.webdriver.common.action_chains import ActionChains
+                    
+                    print(">>> Using Selenium for clicking")
+                    # Note: This is just a fallback check, actual implementation would need a driver instance
+                    if hasattr(self, 'driver') and self.driver is not None:
+                        actions = ActionChains(self.driver)
+                        actions.move_to_element_with_offset(self.driver.find_element_by_tag_name('body'), x, y)
+                        actions.click()
+                        actions.perform()
+                        print(">>> Clicked using Selenium")
+                        return True
+                except Exception as e:
+                    print(f">>> Selenium click failed: {e}")
+                    # Fall back to OS-specific methods
+            
             if self.os_type == "Linux":
-                subprocess.run(["xdotool", "mousemove", str(x), str(y), "click", "1"], 
-                            check=False,
-                            stdout=subprocess.DEVNULL, 
-                            stderr=subprocess.DEVNULL)
+                print(">>> Using xdotool for clicking")
+                try:
+                    # First try simpler approach
+                    subprocess.run(["xdotool", "mousemove", str(x), str(y), "click", "1"], 
+                                check=False,
+                                stdout=subprocess.DEVNULL)
+                    print(">>> Linux click successful")
+                    return True
+                except Exception as e:
+                    print(f">>> xdotool click failed: {e}")
+                    # Try alternative approach
+                    try:
+                        # Move mouse first
+                        subprocess.run(["xdotool", "mousemove", str(x), str(y)], check=False)
+                        time.sleep(0.2)
+                        # Then click
+                        subprocess.run(["xdotool", "click", "1"], check=False)
+                        return True
+                    except Exception as e2:
+                        print(f">>> Alternative xdotool approach failed: {e2}")
+                        return False
+                        
             elif self.os_type == "Windows":
-                # Method 1: Using direct Win32 API calls
+                print(">>> Using Win32 API for clicking")
+                
+                # Create a more reliable PowerShell script for mouse clicking
+                try:
+                    # Try using pyautogui if available (simplest approach)
+                    import pyautogui
+                    pyautogui.click(x=x, y=y)
+                    print(">>> Clicked using pyautogui")
+                    return True
+                except ImportError:
+                    print(">>> pyautogui not available, falling back to PowerShell")
+                
+                # Method 1: Using direct Win32 API calls via PowerShell
                 ps_script = f'''
+                # Log what we're doing
+                Write-Output "Attempting to click at position {x}, {y}"
+                
                 # Create a .NET method that calls the Win32 API
                 Add-Type -TypeDefinition @"
                 using System;
                 using System.Runtime.InteropServices;
                 
-                public class MouseOperations
+                public class MouseOps
                 {{
-                    [DllImport("user32.dll")]
+                    [DllImport("user32.dll", SetLastError = true)]
                     public static extern bool SetCursorPos(int x, int y);
                     
-                    [DllImport("user32.dll")]
+                    [DllImport("user32.dll", SetLastError = true)]
                     public static extern void mouse_event(int dwFlags, int dx, int dy, int cButtons, int dwExtraInfo);
+                    
+                    [DllImport("user32.dll")]
+                    [return: MarshalAs(UnmanagedType.Bool)]
+                    public static extern bool GetCursorPos(out System.Drawing.Point lpPoint);
                     
                     public const int MOUSEEVENTF_LEFTDOWN = 0x0002;
                     public const int MOUSEEVENTF_LEFTUP = 0x0004;
+                    public const int MOUSEEVENTF_ABSOLUTE = 0x8000;
                 }}
                 "@
                 
-                # Position cursor and click
-                [MouseOperations]::SetCursorPos({x}, {y})
+                # Get current cursor position to verify
+                $position = New-Object System.Drawing.Point
+                [MouseOps]::GetCursorPos([ref]$position)
+                Write-Output "Starting cursor position: $($position.X), $($position.Y)"
+                
+                # Position cursor
+                $result = [MouseOps]::SetCursorPos({x}, {y})
+                Write-Output "SetCursorPos result: $result"
+                
+                # Verify cursor position
+                [MouseOps]::GetCursorPos([ref]$position)
+                Write-Output "New cursor position: $($position.X), $($position.Y)"
+                
+                # Click down and up with delay
+                Write-Output "Sending mouse down event"
+                [MouseOps]::mouse_event([MouseOps]::MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0)
                 Start-Sleep -Milliseconds 100
-                [MouseOperations]::mouse_event([MouseOperations]::MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0)
-                Start-Sleep -Milliseconds 100
-                [MouseOperations]::mouse_event([MouseOperations]::MOUSEEVENTF_LEFTUP, 0, 0, 0, 0)
+                
+                Write-Output "Sending mouse up event"
+                [MouseOps]::mouse_event([MouseOps]::MOUSEEVENTF_LEFTUP, 0, 0, 0, 0)
+                
+                Write-Output "Click sequence completed"
                 '''
                 
-                # Save script to file and execute (more reliable than passing directly)
-                script_path = os.path.join(os.path.expanduser("~"), "click_script.ps1")
-                with open(script_path, "w") as f:
+                # Save script to file with UTF-8 encoding
+                script_path = os.path.join(os.path.expanduser("~"), "win_click.ps1")
+                with open(script_path, "w", encoding="utf-8") as f:
                     f.write(ps_script)
                 
-                subprocess.run(["powershell", "-ExecutionPolicy", "Bypass", "-File", script_path], 
-                            shell=True,
-                            stdout=subprocess.DEVNULL, 
-                            stderr=subprocess.DEVNULL)
+                # Run PowerShell with more reliable parameters and capture output
+                print(f">>> Running PowerShell script from {script_path}")
+                result = subprocess.run(
+                    ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script_path],
+                    capture_output=True,
+                    text=True
+                )
+                
+                # Print PowerShell output for debugging
+                print(f">>> PowerShell stdout: {result.stdout}")
+                if result.stderr:
+                    print(f">>> PowerShell stderr: {result.stderr}")
                 
                 # Clean up script file
                 try:
                     os.remove(script_path)
-                except:
-                    pass
+                except Exception as e:
+                    print(f">>> Failed to remove script file: {e}")
                 
-            return True
+                # Try alternative clicking method if first method may have failed
+                try:
+                    # Alternative click method using SendKeys
+                    alt_script = f'''
+                    Add-Type -AssemblyName System.Windows.Forms
+                    [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point({x}, {y})
+                    Start-Sleep -Milliseconds 100
+                    [System.Windows.Forms.SendKeys]::SendWait(" ")
+                    Start-Sleep -Milliseconds 100
+                    '''
+                    
+                    subprocess.run(["powershell", "-Command", alt_script], 
+                                shell=True,
+                                stdout=subprocess.DEVNULL)
+                except Exception as e:
+                    print(f">>> Alternative click method failed: {e}")
+                
+                return True
+                
+            else:
+                print(f">>> Unsupported OS for clicking: {self.os_type}")
+                return False
+                
         except Exception as e:
-            print(f">>> Error clicking: {e}")
+            print(f">>> Critical error clicking: {e}")
             return False
     
     def right_click(self, x, y):
@@ -314,74 +443,172 @@ class BaseBrowserModule(ABC):
             return False
     
     def scroll_down(self, count=1):
-        for _ in range(count):
+        print(f">>> Attempting to scroll down {count} times")
+        
+        # Try to use pyautogui first if available (cross-platform solution)
+        try:
+            import pyautogui
+            print(">>> Using PyAutoGUI for scrolling")
+            for _ in range(count):
+                # First try page down key
+                pyautogui.press('pagedown')
+                time.sleep(0.5)
+                # Then also scroll with mouse wheel
+                pyautogui.scroll(-100)  # Negative value scrolls down
+                time.sleep(random.uniform(1, 3))
+            return True
+        except ImportError:
+            print(">>> PyAutoGUI not available, using native methods")
+        
+        for i in range(count):
+            print(f">>> Scroll attempt {i+1}/{count}")
+            
             if self.os_type == "Linux":
                 try:
+                    print(">>> Using xdotool for Linux scrolling")
+                    # First try Page_Down key
                     subprocess.run(["xdotool", "key", "Page_Down"], 
                                 check=False,
-                                stdout=subprocess.DEVNULL, 
-                                stderr=subprocess.DEVNULL)
-                except:
-                    pass
+                                stdout=subprocess.DEVNULL)
+                    time.sleep(0.5)
+                    
+                    # Also try scrolling with mouse wheel (this often works better)
+                    for _ in range(5):  # Multiple small scrolls often work better
+                        subprocess.run(["xdotool", "click", "5"], 
+                                    check=False,
+                                    stdout=subprocess.DEVNULL)
+                        time.sleep(0.1)
+                except Exception as e:
+                    print(f">>> Linux scroll failed: {e}")
+                    # Try fallback method - send Down key multiple times
+                    try:
+                        for _ in range(10):
+                            subprocess.run(["xdotool", "key", "Down"], check=False)
+                            time.sleep(0.1)
+                    except:
+                        pass
+            
             elif self.os_type == "Windows":
-                # Write a robust PowerShell script for scrolling
+                print(">>> Using PowerShell/Win32 API for Windows scrolling")
+                
+                # Write a robust PowerShell script for scrolling with extensive logging
                 ps_script = '''
+                Write-Output "Starting scroll operation..."
+                
                 # Create a .NET method that calls the Win32 API for mouse wheel scrolling
                 Add-Type -TypeDefinition @"
                 using System;
                 using System.Runtime.InteropServices;
                 
-                public class ScrollOperations
+                public class ScrollOps
                 {
-                    [DllImport("user32.dll")]
+                    [DllImport("user32.dll", SetLastError = true)]
                     public static extern bool SetCursorPos(int x, int y);
                     
-                    [DllImport("user32.dll")]
+                    [DllImport("user32.dll", SetLastError = true)]
                     public static extern void mouse_event(int dwFlags, int dx, int dy, int cButtons, int dwExtraInfo);
                     
+                    [DllImport("user32.dll")]
+                    public static extern IntPtr GetForegroundWindow();
+                    
+                    [DllImport("user32.dll")]
+                    [return: MarshalAs(UnmanagedType.Bool)]
+                    public static extern bool PostMessage(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
+                    
                     public const int MOUSEEVENTF_WHEEL = 0x0800;
+                    public const uint WM_KEYDOWN = 0x0100;
+                    public const uint WM_KEYUP = 0x0101;
+                    public const uint VK_NEXT = 0x22; // Page Down key
                 }
                 "@
                 
-                # First, try to send Page Down key
+                # Method 1: Try to send Page Down key
+                Write-Output "Sending Page Down key..."
                 Add-Type -AssemblyName System.Windows.Forms
                 [System.Windows.Forms.SendKeys]::SendWait("{PGDN}")
-                Start-Sleep -Milliseconds 200
+                Start-Sleep -Milliseconds 500
                 
-                # Then also try to scroll with the mouse wheel
+                # Method 2: Try directly posting to window
+                Write-Output "Trying direct message post..."
+                try {
+                    $hwnd = [ScrollOps]::GetForegroundWindow()
+                    if ($hwnd -ne [IntPtr]::Zero) {
+                        Write-Output "Found foreground window: $hwnd"
+                        [ScrollOps]::PostMessage($hwnd, [ScrollOps]::WM_KEYDOWN, [IntPtr][ScrollOps]::VK_NEXT, [IntPtr]::Zero)
+                        Start-Sleep -Milliseconds 100
+                        [ScrollOps]::PostMessage($hwnd, [ScrollOps]::WM_KEYUP, [IntPtr][ScrollOps]::VK_NEXT, [IntPtr]::Zero)
+                    } else {
+                        Write-Output "No foreground window found"
+                    }
+                } catch {
+                    Write-Output "Error with direct message: $_"
+                }
+                
+                # Method 3: Scroll with the mouse wheel (multiple small scrolls)
+                Write-Output "Using mouse wheel..."
+                
                 # Get screen dimensions to scroll in the middle
                 $screenWidth = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Width
                 $screenHeight = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Height
                 
+                Write-Output "Screen dimensions: $screenWidth x $screenHeight"
+                
                 # Set cursor to middle of screen
-                [ScrollOperations]::SetCursorPos($screenWidth / 2, $screenHeight / 2)
-                Start-Sleep -Milliseconds 100
+                $centerX = $screenWidth / 2
+                $centerY = $screenHeight / 2
+                Write-Output "Moving cursor to center: $centerX, $centerY"
+                
+                $result = [ScrollOps]::SetCursorPos($centerX, $centerY)
+                Write-Output "SetCursorPos result: $result"
                 
                 # Scroll down multiple times to ensure it works
-                for ($i = 0; $i -lt 5; $i++) {
+                for ($i = 0; $i -lt 10; $i++) {
+                    Write-Output "Scroll iteration $i"
                     # Negative number scrolls down
-                    [ScrollOperations]::mouse_event([ScrollOperations]::MOUSEEVENTF_WHEEL, 0, 0, -120, 0)
+                    [ScrollOps]::mouse_event([ScrollOps]::MOUSEEVENTF_WHEEL, 0, 0, -120, 0)
                     Start-Sleep -Milliseconds 50
                 }
+                
+                # Method 4: Alternative keyboard approach with arrow keys
+                Write-Output "Using arrow keys as fallback..."
+                for ($i = 0; $i -lt 10; $i++) {
+                    [System.Windows.Forms.SendKeys]::SendWait("{DOWN}")
+                    Start-Sleep -Milliseconds 50
+                }
+                
+                Write-Output "Scroll operation complete"
                 '''
                 
-                # Save script to file and execute (more reliable than passing directly)
-                script_path = os.path.join(os.path.expanduser("~"), "scroll_script.ps1")
-                with open(script_path, "w") as f:
+                # Save script to file with UTF-8 encoding and execute
+                script_path = os.path.join(os.path.expanduser("~"), "win_scroll.ps1")
+                with open(script_path, "w", encoding="utf-8") as f:
                     f.write(ps_script)
                 
-                subprocess.run(["powershell", "-ExecutionPolicy", "Bypass", "-File", script_path], 
-                            shell=True,
-                            stdout=subprocess.DEVNULL, 
-                            stderr=subprocess.DEVNULL)
+                # Run with output capture for debugging
+                result = subprocess.run(
+                    ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script_path],
+                    capture_output=True,
+                    text=True
+                )
+                
+                # Print output for debugging
+                print(f">>> PowerShell scroll output: {result.stdout[:200]}...")
+                if result.stderr:
+                    print(f">>> PowerShell scroll error: {result.stderr}")
                 
                 # Clean up script file
                 try:
                     os.remove(script_path)
-                except:
-                    pass
+                except Exception as e:
+                    print(f">>> Failed to remove scroll script: {e}")
             
+            else:
+                print(f">>> Unsupported OS for scrolling: {self.os_type}")
+            
+            # Wait between scrolls
             time.sleep(random.uniform(2, 5))
+        
+        return True
     
     def close_browser(self):
         try:
