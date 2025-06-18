@@ -54,6 +54,10 @@ class SoundcloudModule(BaseBrowserModule):
             
             print(f">>> Listening to music for {listen_time} seconds")
             
+            # Make sure playback starts by pressing space
+            self.press_key("space")
+            time.sleep(1)
+            
             # Simulate periodic interactions while listening
             intervals = min(10, max(2, listen_time // 30))
             interval_time = listen_time / intervals
@@ -69,7 +73,7 @@ class SoundcloudModule(BaseBrowserModule):
                 print(f">>> {interaction}")
                 
                 # Occasionally interact with the player
-                if random.random() < 0.4:
+                if random.random() < 0.6:  # Increased from 0.4
                     interaction_type = random.choice([
                         "skip_forward",
                         "play_pause",
@@ -77,21 +81,54 @@ class SoundcloudModule(BaseBrowserModule):
                         "scrub"
                     ])
                     
-                    if interaction_type == "skip_forward":
-                        self.press_key("Right")
-                        print(">>> Skipped forward in track")
-                    elif interaction_type == "play_pause":
-                        self.press_key("space")
-                        print(">>> Paused/resumed track")
-                        time.sleep(1.5)
-                        self.press_key("space")
-                    elif interaction_type == "volume":
-                        self.click(800, 700)
-                        print(">>> Adjusted volume")
-                    elif interaction_type == "scrub":
-                        x_pos = random.randint(300, 600)
-                        self.click(x_pos, 700)
-                        print(">>> Jumped to different part of track")
+                    if self.os_type == "Windows":
+                        # Use more reliable keyboard shortcuts for Windows
+                        if interaction_type == "skip_forward":
+                            # Press right arrow key multiple times to ensure it works
+                            self.press_key("Right")
+                            time.sleep(0.2)
+                            self.press_key("Right")
+                            print(">>> Skipped forward in track with arrow keys")
+                        elif interaction_type == "play_pause":
+                            # Space is universal for play/pause
+                            self.press_key("space")
+                            print(">>> Paused track with space key")
+                            time.sleep(1.5)
+                            self.press_key("space")
+                            print(">>> Resumed track with space key")
+                        elif interaction_type == "volume":
+                            # Up/down arrows for volume
+                            self.press_key("Up")
+                            time.sleep(0.2)
+                            self.press_key("Up")
+                            time.sleep(0.5)
+                            self.press_key("Down")
+                            print(">>> Adjusted volume with arrow keys")
+                        elif interaction_type == "scrub":
+                            # Use Left/Right for scrubbing through track
+                            jumps = random.randint(1, 5)
+                            direction = random.choice(["Left", "Right"])
+                            for _ in range(jumps):
+                                self.press_key(direction)
+                                time.sleep(0.1)
+                            print(f">>> Jumped {direction.lower()} in track using arrow keys")
+                    else:
+                        # Original approach for Linux
+                        if interaction_type == "skip_forward":
+                            self.press_key("Right")
+                            print(">>> Skipped forward in track")
+                        elif interaction_type == "play_pause":
+                            self.press_key("space")
+                            print(">>> Paused/resumed track")
+                            time.sleep(1.5)
+                            self.press_key("space")
+                        elif interaction_type == "volume":
+                            self.click(800, 700)
+                            print(">>> Adjusted volume")
+                        elif interaction_type == "scrub":
+                            x_pos = random.randint(300, 600)
+                            self.click(x_pos, 700)
+                            print(">>> Jumped to different part of track")
         
         # Close browser when done
         self.close_browser()

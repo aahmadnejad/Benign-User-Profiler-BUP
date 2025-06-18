@@ -4,6 +4,7 @@ import time
 import random
 import os
 import requests
+import subprocess
 from .base_browser import BaseBrowserModule
 
 class ImageDownloadModule(BaseBrowserModule):

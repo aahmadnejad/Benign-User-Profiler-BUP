@@ -55,6 +55,10 @@ class YoutubeModule(BaseBrowserModule):
             
             print(f">>> Watching video for {watch_time} seconds")
             
+            # First, make sure video is playing by pressing space bar
+            self.press_key("space")
+            time.sleep(1)
+            
             # Simulate periodic interactions while watching
             intervals = min(10, max(2, watch_time // 30))
             interval_time = watch_time / intervals
@@ -71,37 +75,67 @@ class YoutubeModule(BaseBrowserModule):
                 print(f">>> {interaction}")
                 
                 # Occasionally interact with the video
-                if random.random() < 0.5:  # 50% chance to interact
+                if random.random() < 0.7:  # 70% chance to interact (increased from 50%)
                     interaction_type = random.choice([
                         "scroll",
                         "like",
                         "volume",
-                        "fullscreen",
-                        "skip"
+                        "skip",
+                        "fullscreen"
                     ])
                     
-                    if interaction_type == "scroll":
-                        self.scroll_down()
-                        print(">>> Scrolled down in comments")
-                    elif interaction_type == "like":
-                        # Like button position
-                        self.click(600, 700)
-                        print(">>> Clicked like button")
-                    elif interaction_type == "volume":
-                        # Volume control area
-                        self.click(200, 700)
-                        print(">>> Adjusted volume")
-                    elif interaction_type == "fullscreen":
-                        # Fullscreen button area
-                        self.click(900, 700)
-                        print(">>> Toggled fullscreen")
-                        time.sleep(5)
-                        # Press Escape to exit fullscreen
-                        self.press_key("Escape")
-                    elif interaction_type == "skip":
-                        # Skip forward
-                        self.press_key("Right")
-                        print(">>> Skipped forward in video")
+                    # Get screen dimensions for more accurate positioning
+                    if self.os_type == "Windows":
+                        # Use more reliable key presses instead of clicks when possible
+                        if interaction_type == "scroll":
+                            self.scroll_down()
+                            print(">>> Scrolled down in comments")
+                        elif interaction_type == "like":
+                            # Use L key to like on YouTube
+                            self.press_key("l")
+                            print(">>> Pressed L key to like video")
+                        elif interaction_type == "volume":
+                            # Use up/down arrow for volume
+                            self.press_key("Up")
+                            time.sleep(0.5)
+                            self.press_key("Down")
+                            print(">>> Adjusted volume with arrow keys")
+                        elif interaction_type == "skip":
+                            # Skip forward with right arrow key
+                            self.press_key("Right")
+                            self.press_key("Right")
+                            print(">>> Skipped forward in video")
+                        elif interaction_type == "fullscreen":
+                            # F key for fullscreen
+                            self.press_key("f")
+                            print(">>> Pressed F key for fullscreen")
+                            time.sleep(3)
+                            # Exit fullscreen
+                            self.press_key("Escape")
+                    else:
+                        # Original click-based approach for Linux
+                        if interaction_type == "scroll":
+                            self.scroll_down()
+                            print(">>> Scrolled down in comments")
+                        elif interaction_type == "like":
+                            # Like button position
+                            self.click(600, 700)
+                            print(">>> Clicked like button")
+                        elif interaction_type == "volume":
+                            # Volume control area
+                            self.click(200, 700)
+                            print(">>> Adjusted volume")
+                        elif interaction_type == "fullscreen":
+                            # Fullscreen button area
+                            self.click(900, 700)
+                            print(">>> Toggled fullscreen")
+                            time.sleep(5)
+                            # Press Escape to exit fullscreen
+                            self.press_key("Escape")
+                        elif interaction_type == "skip":
+                            # Skip forward
+                            self.press_key("Right")
+                            print(">>> Skipped forward in video")
             
         # Close browser when done
         self.close_browser()
