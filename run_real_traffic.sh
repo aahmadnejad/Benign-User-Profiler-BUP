@@ -284,6 +284,11 @@ done
 # Build command with optional flags
 CMD="python -m BenignUserProfiler"
 
+# Always use randomize by default
+RANDOMIZE=1
+echo -e "${GREEN}Running with RANDOMIZED task execution (default)${NC}"
+CMD="$CMD --randomize"
+
 if [ $SIMULATE -eq 1 ]; then
     echo -e "${GREEN}Running in SIMULATION mode (no real browser interactions)${NC}"
     CMD="$CMD --simulate"
@@ -297,11 +302,6 @@ else
     # Launch a Firefox instance first to make sure it's working
     echo -e "${YELLOW}Testing Firefox...${NC}"
     firefox --version
-fi
-
-if [ $RANDOMIZE -eq 1 ]; then
-    echo -e "${GREEN}Running with RANDOMIZED task execution${NC}"
-    CMD="$CMD --randomize"
 fi
 
 if [ $DEBUG -eq 1 ]; then

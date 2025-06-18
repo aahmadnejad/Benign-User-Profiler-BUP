@@ -2,6 +2,8 @@
 
 import time
 import random
+import subprocess
+import os
 from .base_browser import BaseBrowserModule
 
 class SoundcloudModule(BaseBrowserModule):
@@ -19,18 +21,107 @@ class SoundcloudModule(BaseBrowserModule):
             search_term = random.choice(config["soundcloud_searches"])
             print(f">>> Searching for music: {search_term}")
             
-            search_url = f"https://soundcloud.com/search?q={search_term.replace(' ', '%20')}"
-            print(f">>> Navigating to SoundCloud search: {search_url}")
-            self.browser_command(search_url)
+            # Choose between different search methods (direct URL or interactive)
+            search_method = random.choice(["direct_url", "interactive"])
             
+            if search_method == "direct_url":
+                # Navigate directly to search results URL
+                search_url = f"https://soundcloud.com/search?q={search_term.replace(' ', '%20')}"
+                print(f">>> Using direct URL search: {search_url}")
+                self.browser_command(search_url)
+            else:
+                # Interactive search using search box
+                print(">>> Using interactive search method")
+                # Navigate to main page
+                self.browser_command(soundcloud_url)
+                time.sleep(random.uniform(3, 5))
+                
+                # Try to find and click on the search box
+                try:
+                    import pyautogui
+                    screen_width, screen_height = pyautogui.size()
+                    
+                    # Try several locations where the search button might be
+                    search_positions = [
+                        (screen_width // 2, 80),           # Middle top
+                        (screen_width * 0.7, 80),          # Right top
+                        (screen_width * 0.8, 80),          # Far right top
+                        (screen_width * 0.9, 80),          # Very far right top
+                        (screen_width // 4, 80)            # Left top
+                    ]
+                    
+                    # Try clicking on each possible search position
+                    for pos in search_positions:
+                        print(f">>> Clicking potential search box at {pos}")
+                        pyautogui.click(pos[0], pos[1])
+                        time.sleep(0.5)
+                        
+                        # Type the search term
+                        pyautogui.write(search_term)
+                        time.sleep(0.5)
+                        pyautogui.press('enter')
+                        time.sleep(0.5)
+                except ImportError:
+                    # Fallback to multiple clicks
+                    search_positions = [(900, 80), (800, 80), (700, 80), (600, 80)]
+                    for pos in search_positions:
+                        self.click(pos[0], pos[1])
+                        time.sleep(0.5)
+                        
+                        # Type the search term using base_browser methods
+                        for char in search_term:
+                            self.press_key(char)
+                            time.sleep(0.05)
+                        self.press_key("Return")
+                        time.sleep(0.5)
+            
+            # Wait for search results to load
             time.sleep(random.uniform(5, 10))
             
             print(">>> Selecting a track from search results")
-            time.sleep(5)
             
-            # Click on the first search result (typically around this position)
-            self.click(900, 450)
-            print(">>> Clicked on first search result")
+            # Select a track with weighted random selection (prefer top results)
+            # Define different selection areas with weights
+            selection_areas = [
+                # Area, weight (higher means more likely)
+                {"area": {"x_min": 400, "x_max": 800, "y_min": 250, "y_max": 350}, "weight": 0.5},  # Top result
+                {"area": {"x_min": 400, "x_max": 800, "y_min": 350, "y_max": 450}, "weight": 0.3},  # Second result
+                {"area": {"x_min": 400, "x_max": 800, "y_min": 450, "y_max": 550}, "weight": 0.1},  # Third result
+                {"area": {"x_min": 400, "x_max": 800, "y_min": 550, "y_max": 650}, "weight": 0.1}   # Fourth result
+            ]
+            
+            # Choose an area based on weights
+            weights = [area["weight"] for area in selection_areas]
+            chosen_area = random.choices(selection_areas, weights=weights, k=1)[0]["area"]
+            
+            # Pick a random point within that area
+            try:
+                import pyautogui
+                screen_width, screen_height = pyautogui.size()
+                
+                # Scale the coordinates based on screen size
+                x_min = int(chosen_area["x_min"] * screen_width / 1920)
+                x_max = int(chosen_area["x_max"] * screen_width / 1920)
+                y_min = chosen_area["y_min"]
+                y_max = chosen_area["y_max"]
+                
+                # Select random point within the area
+                x = random.randint(x_min, x_max)
+                y = random.randint(y_min, y_max)
+                
+                print(f">>> Clicking on track at position ({x}, {y})")
+                
+                # Click multiple times with slight offsets to ensure we hit the track
+                for offset in [(0, 0), (10, 0), (-10, 0), (0, 10), (0, -10)]:
+                    click_x = max(0, min(screen_width, x + offset[0]))
+                    click_y = max(0, min(screen_height, y + offset[1]))
+                    pyautogui.click(click_x, click_y)
+                    time.sleep(0.3)
+            except ImportError:
+                # Fallback to simple click at fixed positions
+                self.click(random.randint(400, 800), random.randint(300, 600))
+                time.sleep(0.5)
+                self.click(random.randint(400, 800), random.randint(300, 600))
             
             # Wait for track page to load
             time.sleep(5)
@@ -38,7 +129,7 @@ class SoundcloudModule(BaseBrowserModule):
             # Multiple methods to ensure music plays
             print(">>> Using multiple methods to start music playback")
             
-            # Method 1: Try using pyautogui to click at the exact center of the play button
+            # Method 1: Try using pyautogui to click at likely play button positions
             try:
                 import pyautogui
                 # Get screen size
@@ -56,12 +147,19 @@ class SoundcloudModule(BaseBrowserModule):
                     (center_x - 200, center_y),  # Left of center
                     (center_x, center_y - 50),   # Slightly above center
                     (center_x - 100, center_y),  # Slightly left of center
+                    (center_x - 250, center_y),  # Far left (SoundCloud play button)
+                    (center_x - 250, center_y - 50), # Far left, slightly above
+                    (center_x - 250, center_y + 50)  # Far left, slightly below
                 ]
                 
                 for pos in play_positions:
                     print(f">>> Clicking potential play button at {pos}")
-                    pyautogui.click(pos[0], pos[1])
-                    time.sleep(0.5)
+                    # Click multiple times with slight offsets
+                    for offset in [(0, 0), (5, 0), (-5, 0), (0, 5), (0, -5)]:
+                        click_x = max(0, min(screen_width, pos[0] + offset[0]))
+                        click_y = max(0, min(screen_height, pos[1] + offset[1]))
+                        pyautogui.click(click_x, click_y)
+                        time.sleep(0.2)
                 
             except ImportError:
                 # Fallback to multiple clicks at different positions
@@ -81,6 +179,23 @@ class SoundcloudModule(BaseBrowserModule):
             for key in ["j", "k", "l"]:
                 self.press_key(key)
                 time.sleep(0.5)
+                
+            # Method 4: Try to click on the waveform
+            try:
+                import pyautogui
+                screen_width, screen_height = pyautogui.size()
+                
+                # SoundCloud's waveform is usually in the middle of the page
+                waveform_y = screen_height // 2
+                
+                # Click at several positions along the waveform
+                for x_ratio in [0.25, 0.5, 0.75]:
+                    x = int(screen_width * x_ratio)
+                    print(f">>> Clicking on waveform at ({x}, {waveform_y})")
+                    pyautogui.click(x, waveform_y)
+                    time.sleep(0.5)
+            except ImportError:
+                pass
             
             # Wait a bit to let music start
             print(">>> Track should be playing now")
@@ -94,78 +209,202 @@ class SoundcloudModule(BaseBrowserModule):
             
             print(f">>> Listening to music for {listen_time} seconds")
             
-            # Simulate periodic interactions while listening
-            intervals = min(10, max(2, listen_time // 30))
-            interval_time = listen_time / intervals
-            
-            for i in range(intervals):
-                time.sleep(interval_time)
+            # Create a function to retry playback periodically
+            def ensure_playback():
+                print(">>> Ensuring music is playing...")
                 
+                # Try to click play button at various locations
+                try:
+                    import pyautogui
+                    screen_width, screen_height = pyautogui.size()
+                    
+                    # For SoundCloud, the play button is often in these areas
+                    play_positions = [
+                        (screen_width // 2, screen_height // 2 - 100),  # Center-top
+                        (screen_width // 3, screen_height // 2),        # Left-center
+                        (screen_width // 2, screen_height // 2),        # Center
+                        (screen_width // 2 - 200, screen_height // 2),  # Far left-center
+                        (50, screen_height // 2),                      # Very far left (play button)
+                        (screen_width // 2 - 250, screen_height // 2)   # Another far left position
+                    ]
+                    
+                    # Click each position with multiple attempts and offsets
+                    for pos in play_positions:
+                        print(f">>> Clicking potential play button at {pos}")
+                        for offset in [(0, 0), (5, 5), (-5, -5), (5, -5), (-5, 5)]:
+                            click_x = max(0, min(screen_width, pos[0] + offset[0]))
+                            click_y = max(0, min(screen_height, pos[1] + offset[1]))
+                            pyautogui.click(click_x, click_y)
+                            time.sleep(0.2)
+                except ImportError:
+                    # Use legacy approach
+                    for pos in [(400, 300), (300, 350), (500, 300)]:
+                        self.click(pos[0], pos[1])
+                        time.sleep(0.5)
+                
+                # Press space key (universal play/pause)
+                print(">>> Pressing space to play/pause")
+                self.press_key("space")
+                time.sleep(0.5)
+                
+                # Sometimes pressing 'L' restarts playback
+                self.press_key("l")
+                time.sleep(0.5)
+                
+                # Try using platform-specific methods as a last resort
+                try:
+                    platform = self.get_platform()
+                    
+                    if platform == "linux":
+                        # On Linux, try xdotool key space
+                        try:
+                            subprocess.run(["xdotool", "key", "space"], timeout=1)
+                            print(">>> Used xdotool to press space")
+                        except (subprocess.SubprocessError, FileNotFoundError):
+                            pass
+                    elif platform == "windows":
+                        # On Windows, pyautogui is already being used above
+                        pass
+                except Exception as e:
+                    print(f">>> Error trying platform-specific playback: {e}")
+            
+            # Set up periodic checks
+            intervals = min(15, max(3, listen_time // 120))  # More intervals
+            interval_time = listen_time / intervals
+            last_playback_check = time.time()
+            playback_check_interval = 180  # Check every 3 minutes
+            
+            # Initial playback check to ensure it's playing from the start
+            ensure_playback()
+            
+            # Simulate periodic interactions while listening
+            for i in range(intervals):
+                # Sleep for shorter intervals
+                current_sleep = min(interval_time, playback_check_interval)
+                time.sleep(current_sleep)
+                
+                # Check if we need to retry playback
+                current_time = time.time()
+                if current_time - last_playback_check >= playback_check_interval:
+                    ensure_playback()
+                    last_playback_check = current_time
+                
+                # Print status update
                 interaction = random.choice([
                     "Still listening...",
                     "Enjoying the music...",
-                    "Music playing..."
+                    "Music playing...",
+                    "Track continues...",
+                    "Audio streaming..."
                 ])
                 print(f">>> {interaction}")
                 
-                # Occasionally interact with the player
-                if random.random() < 0.6:  # Increased from 0.4
+                # Show progress
+                elapsed = (i + 1) * interval_time
+                percent_complete = min(100, (elapsed / listen_time) * 100)
+                print(f">>> Track progress: approximately {percent_complete:.1f}% complete")
+                
+                # Interact with the player using universal keyboard shortcuts
+                if random.random() < 0.7:  # Increased chance to interact
                     interaction_type = random.choice([
                         "skip_forward",
+                        "skip_backward",
                         "play_pause",
-                        "volume",
-                        "scrub"
+                        "volume_up",
+                        "volume_down",
+                        "mute"
                     ])
                     
-                    if self.os_type == "Windows":
-                        # Use more reliable keyboard shortcuts for Windows
-                        if interaction_type == "skip_forward":
-                            # Press right arrow key multiple times to ensure it works
+                    # Use keyboard controls (works better cross-platform)
+                    if interaction_type == "skip_forward":
+                        # Press right arrow key multiple times
+                        for _ in range(random.randint(1, 3)):
                             self.press_key("Right")
                             time.sleep(0.2)
-                            self.press_key("Right")
-                            print(">>> Skipped forward in track with arrow keys")
-                        elif interaction_type == "play_pause":
-                            # Space is universal for play/pause
-                            self.press_key("space")
-                            print(">>> Paused track with space key")
-                            time.sleep(1.5)
-                            self.press_key("space")
-                            print(">>> Resumed track with space key")
-                        elif interaction_type == "volume":
-                            # Up/down arrows for volume
+                        print(">>> Skipped forward in track")
+                    
+                    elif interaction_type == "skip_backward":
+                        # Press left arrow key multiple times
+                        for _ in range(random.randint(1, 3)):
+                            self.press_key("Left")
+                            time.sleep(0.2)
+                        print(">>> Skipped backward in track")
+                    
+                    elif interaction_type == "play_pause":
+                        # Space is universal for play/pause
+                        self.press_key("space")
+                        print(">>> Paused track")
+                        time.sleep(random.uniform(1.0, 2.0))
+                        self.press_key("space")
+                        print(">>> Resumed track")
+                    
+                    elif interaction_type == "volume_up":
+                        # Up arrow for volume up
+                        for _ in range(random.randint(1, 3)):
                             self.press_key("Up")
                             time.sleep(0.2)
-                            self.press_key("Up")
-                            time.sleep(0.5)
+                        print(">>> Increased volume")
+                    
+                    elif interaction_type == "volume_down":
+                        # Down arrow for volume down
+                        for _ in range(random.randint(1, 3)):
                             self.press_key("Down")
-                            print(">>> Adjusted volume with arrow keys")
-                        elif interaction_type == "scrub":
-                            # Use Left/Right for scrubbing through track
-                            jumps = random.randint(1, 5)
-                            direction = random.choice(["Left", "Right"])
-                            for _ in range(jumps):
-                                self.press_key(direction)
-                                time.sleep(0.1)
-                            print(f">>> Jumped {direction.lower()} in track using arrow keys")
-                    else:
-                        # Original approach for Linux
-                        if interaction_type == "skip_forward":
-                            self.press_key("Right")
-                            print(">>> Skipped forward in track")
-                        elif interaction_type == "play_pause":
-                            self.press_key("space")
-                            print(">>> Paused/resumed track")
-                            time.sleep(1.5)
-                            self.press_key("space")
-                        elif interaction_type == "volume":
-                            self.click(800, 700)
-                            print(">>> Adjusted volume")
-                        elif interaction_type == "scrub":
-                            x_pos = random.randint(300, 600)
-                            self.click(x_pos, 700)
-                            print(">>> Jumped to different part of track")
+                            time.sleep(0.2)
+                        print(">>> Decreased volume")
+                    
+                    elif interaction_type == "mute":
+                        # M key often mutes
+                        self.press_key("m")
+                        print(">>> Muted track")
+                        time.sleep(random.uniform(1.0, 2.0))
+                        self.press_key("m")
+                        print(">>> Unmuted track")
+                
+                # Occasionally scroll to see more tracks
+                if i % 3 == 0 and random.random() < 0.5:
+                    scroll_amount = random.randint(1, 3)
+                    self.scroll_down(scroll_amount)
+                    print(f">>> Scrolled down {scroll_amount} times to see more tracks")
+                    time.sleep(random.uniform(1.0, 3.0))
+                    
+                    # Maybe click on another track
+                    if random.random() < 0.3:  # 30% chance to click another track
+                        try:
+                            import pyautogui
+                            screen_width = pyautogui.size()[0]
+                            # Click in the area where tracks are usually listed
+                            x_pos = random.randint(screen_width // 4, screen_width // 4 * 3)
+                            y_pos = random.randint(400, 600)
+                            print(f">>> Clicking on another track at ({x_pos}, {y_pos})")
+                            
+                            # Try clicking multiple times with slight offsets
+                            for offset in [(0, 0), (10, 0), (-10, 0), (0, 10), (0, -10)]:
+                                click_x = max(0, min(screen_width, x_pos + offset[0]))
+                                click_y = max(0, min(screen_height, y_pos + offset[1]))
+                                pyautogui.click(click_x, click_y)
+                                time.sleep(0.2)
+                            
+                            # Ensure playback of the new track
+                            time.sleep(2)
+                            ensure_playback()
+                        except ImportError:
+                            # Fallback to standard click
+                            self.click(random.randint(300, 700), random.randint(400, 600))
+                            time.sleep(2)
         
         # Close browser when done
         self.close_browser()
         return True
+        
+    def get_platform(self):
+        """Helper method to determine the platform"""
+        import platform
+        system = platform.system().lower()
+        if system == "linux":
+            return "linux"
+        elif system == "windows":
+            return "windows"
+        elif system == "darwin":
+            return "macos"
+        else:
+            return "unknown"

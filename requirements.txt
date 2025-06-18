@@ -6,3 +6,4 @@ urllib3>=1.26.0
 beautifulsoup4>=4.11.0
 selenium>=4.0.0
 pyautogui>=0.9.53
+scp>=0.14.0

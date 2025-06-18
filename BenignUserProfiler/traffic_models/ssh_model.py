@@ -11,6 +11,7 @@ from .traffic_model import TrafficModel
 class SSHModel(TrafficModel):
     def __init__(self):
         super().__init__()
+        self.scp_files = []  # Track files created with SCP
         
     def __str__(self):
         return "SSH"
@@ -90,6 +91,11 @@ class SSHModel(TrafficModel):
             except:
                 print(">>> Could not retrieve system information")
             
+            # Execute SCP operations first to upload test files
+            if self.model_config.get("scp_operations", True):
+                print("\n>>> Performing SCP file transfers")
+                self._perform_scp_operations(ssh, host, port, username, password)
+            
             # Execute each command
             for i, command in enumerate(commands):
                 cmd_str = command.get("str") or command.get("command")
@@ -161,6 +167,11 @@ class SSHModel(TrafficModel):
                     print(f">>> {type(e).__name__}: {str(e)}")
                     continue
             
+            # Clean up SCP files if any were created
+            if self.scp_files and self.model_config.get("cleanup_scp_files", True):
+                print("\n>>> Cleaning up SCP test files")
+                self._cleanup_scp_files(ssh)
+            
             # Close connection
             print("\n>>> Closing SSH connection...")
             ssh.close()
@@ -169,6 +180,11 @@ class SSHModel(TrafficModel):
         except Exception as e:
             print(f">>> Error in SSH connection/operations:")
             print(f">>> {type(e).__name__}: {str(e)}")
+            # If this was a connection error, try with different port or settings
+            if "connect" in str(e).lower() and self.model_config.get("retry_on_failure", True):
+                print(">>> Connection failed, will retry with alternative settings...")
+                time.sleep(2)
+                self._retry_with_alternative_settings()
         finally:
             # Ensure SSH connection is closed
             if ssh:
@@ -329,3 +345,121 @@ class SSHModel(TrafficModel):
         
         current_time = datetime.now().strftime("%H:%M:%S")
         print(f">>> [SIMULATION] {current_time} up {hours}:{minutes:02d}, {users} users, load average: {load1:.2f}, {load5:.2f}, {load15:.2f}")
+        
+    def _perform_scp_operations(self, ssh, host, port, username, password):
+        """Perform SCP file transfers to the remote server"""
+        try:
+            # Create a temporary directory for SCP transfers
+            temp_dir = "/tmp/scp_test_files"
+            ssh.exec_command(f"mkdir -p {temp_dir}")
+            
+            # Number of files to transfer
+            num_transfers = random.randint(3, 7)
+            print(f">>> Will perform {num_transfers} SCP file transfers")
+            
+            # Create and transfer files
+            for i in range(num_transfers):
+                # Create a local temporary file with random content
+                local_file = f"/tmp/scp_test_{int(time.time())}_{i}.txt"
+                
+                # Generate random content
+                content_types = [
+                    "Sample log data for system monitoring",
+                    "Configuration data for application deployment",
+                    "Test results from automated testing pipeline",
+                    "JSON data for API integration testing",
+                    "CSV data for reporting and analysis"
+                ]
+                
+                # Create the local file
+                with open(local_file, 'w') as f:
+                    f.write(f"Test file created at {datetime.now()}\n")
+                    f.write(f"Purpose: {random.choice(content_types)}\n")
+                    f.write(f"File size: {random.randint(1, 10)} KB\n")
+                    f.write("-" * 40 + "\n")
+                    
+                    # Add some random data
+                    for j in range(random.randint(10, 50)):
+                        f.write(f"Line {j}: {os.urandom(8).hex()}\n")
+                
+                # Remote file path
+                remote_file = f"{temp_dir}/file_{i}.txt"
+                self.scp_files.append(remote_file)
+                
+                # Upload using SCP
+                print(f">>> Uploading file {i+1}/{num_transfers}: {local_file} -> {remote_file}")
+                
+                try:
+                    # Try to use paramiko's SCP functionality
+                    from scp import SCPClient
+                    
+                    # Create SCP client
+                    with SCPClient(ssh.get_transport()) as scp:
+                        scp.put(local_file, remote_file)
+                    
+                    print(f">>> Successfully uploaded file using SCP")
+                    
+                except ImportError:
+                    # Fallback to using sftp subsystem
+                    try:
+                        sftp = ssh.open_sftp()
+                        sftp.put(local_file, remote_file)
+                        sftp.close()
+                        print(f">>> Successfully uploaded file using SFTP subsystem")
+                    except Exception as e:
+                        print(f">>> Error uploading file: {e}")
+                        continue
+                
+                # Clean up local file
+                try:
+                    os.remove(local_file)
+                except:
+                    pass
+                
+                # Small delay between transfers
+                time.sleep(random.uniform(1, 3))
+            
+            # Verify the transfers
+            stdin, stdout, stderr = ssh.exec_command(f"ls -la {temp_dir}")
+            output = stdout.read().decode()
+            print(f">>> Remote directory contents:\n{output}")
+            
+            return True
+            
+        except Exception as e:
+            print(f">>> Error during SCP operations: {e}")
+            return False
+    
+    def _cleanup_scp_files(self, ssh):
+        """Clean up files created during SCP operations"""
+        if not self.scp_files:
+            return
+            
+        print(f">>> Cleaning up {len(self.scp_files)} SCP files")
+        
+        for file_path in self.scp_files:
+            try:
+                print(f">>> Removing {file_path}")
+                ssh.exec_command(f"rm -f {file_path}")
+                time.sleep(0.5)
+            except Exception as e:
+                print(f">>> Error removing file {file_path}: {e}")
+        
+        # Try to remove the temp directory
+        try:
+            temp_dir = "/tmp/scp_test_files"
+            print(f">>> Removing directory {temp_dir}")
+            ssh.exec_command(f"rmdir {temp_dir}")
+        except:
+            pass
+            
+        # Clear the list
+        self.scp_files = []
+    
+    def _retry_with_alternative_settings(self):
+        """Try alternative settings if initial connection fails"""
+        # This is a stub - in a real implementation you might try:
+        # - Different ports
+        # - Different authentication methods
+        # - Proxy or tunnel connections
+        print(">>> Not implementing retry logic in this version")
