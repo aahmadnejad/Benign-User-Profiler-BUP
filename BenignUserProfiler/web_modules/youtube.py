@@ -55,8 +55,30 @@ class YoutubeModule(BaseBrowserModule):
             
             print(f">>> Watching video for {watch_time} seconds")
             
-            # First, make sure video is playing by pressing space bar
+            # Force video to play using multiple methods
+            print(">>> Trying to start video playback")
+            
+            # Method 1: Click in the center of the video player
+            print(">>> Clicking center of video")
+            try:
+                import pyautogui
+                # Get screen size
+                screen_width, screen_height = pyautogui.size()
+                # Click center of screen
+                pyautogui.click(screen_width // 2, screen_height // 2)
+                time.sleep(1)
+            except ImportError:
+                self.click(500, 400)  # Fallback to approximate center
+                time.sleep(1)
+            
+            # Method 2: Press space bar
+            print(">>> Pressing space bar to play/pause")
             self.press_key("space")
+            time.sleep(1)
+            
+            # Method 3: Press 'k' key (YouTube keyboard shortcut for play/pause)
+            print(">>> Pressing 'k' key (YouTube shortcut)")
+            self.press_key("k")
             time.sleep(1)
             
             # Simulate periodic interactions while watching

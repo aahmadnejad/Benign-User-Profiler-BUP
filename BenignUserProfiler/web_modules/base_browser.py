@@ -403,11 +403,54 @@ class BaseBrowserModule(ABC):
     
     def press_key(self, key):
         try:
+            print(f">>> Pressing key: {key}")
+            
+            # Try to use pyautogui first (most reliable cross-platform method)
+            try:
+                import pyautogui
+                
+                # Map xdotool key names to pyautogui names
+                key_mapping = {
+                    "Return": "enter",
+                    "Escape": "esc", 
+                    "Page_Down": "pagedown",
+                    "Page_Up": "pageup",
+                    "Right": "right",
+                    "Left": "left",
+                    "Up": "up",
+                    "Down": "down",
+                    "space": "space",
+                    "alt+Left": ["alt", "left"],
+                    "alt+F4": ["alt", "f4"]
+                }
+                
+                # Convert key if it's in our mapping
+                pyautogui_key = key_mapping.get(key, key)
+                
+                if isinstance(pyautogui_key, list):
+                    # Handle key combinations
+                    pyautogui.hotkey(*pyautogui_key)
+                else:
+                    # Press single key
+                    pyautogui.press(pyautogui_key)
+                
+                print(f">>> Pressed key {key} using PyAutoGUI")
+                return True
+            except ImportError:
+                print(">>> PyAutoGUI not available, using platform-specific methods")
+            
             if self.os_type == "Linux":
-                subprocess.run(["xdotool", "key", key], 
-                            check=False,
-                            stdout=subprocess.DEVNULL, 
-                            stderr=subprocess.DEVNULL)
+                # Linux xdotool method
+                try:
+                    subprocess.run(["xdotool", "key", key], 
+                                check=False,
+                                stdout=subprocess.DEVNULL)
+                    print(f">>> Pressed key {key} using xdotool")
+                    return True
+                except Exception as e:
+                    print(f">>> xdotool key press failed: {e}")
+                    # Fall back to other methods
+            
             elif self.os_type == "Windows":
                 # Map common key names to SendKeys format
                 key_mapping = {
@@ -421,23 +464,101 @@ class BaseBrowserModule(ABC):
                     "Down": "{DOWN}",
                     "space": " ",
                     "alt+Left": "%{LEFT}",
-                    "alt+F4": "%{F4}"
+                    "alt+F4": "%{F4}",
+                    # Add single letter mappings
+                    "a": "a", "b": "b", "c": "c", "d": "d", "e": "e", "f": "f", "g": "g",
+                    "h": "h", "i": "i", "j": "j", "k": "k", "l": "l", "m": "m", "n": "n",
+                    "o": "o", "p": "p", "q": "q", "r": "r", "s": "s", "t": "t", "u": "u",
+                    "v": "v", "w": "w", "x": "x", "y": "y", "z": "z"
                 }
                 
                 # Convert key to SendKeys format if it's in our mapping
                 send_key = key_mapping.get(key, key)
                 
-                ps_script = f'''
-                Add-Type -AssemblyName System.Windows.Forms
-                [System.Windows.Forms.Application]::DoEvents()
-                [System.Windows.Forms.SendKeys]::SendWait("{send_key}")
-                Start-Sleep -Milliseconds 100
-                '''
-                subprocess.run(["powershell", "-Command", ps_script], 
-                            shell=True,
-                            stdout=subprocess.DEVNULL, 
-                            stderr=subprocess.DEVNULL)
-            return True
+                # Method 1: Windows SendKeys through PowerShell
+                try:
+                    ps_script = f'''
+                    Add-Type -AssemblyName System.Windows.Forms
+                    [System.Windows.Forms.Application]::DoEvents()
+                    Write-Output "Sending key: {send_key}"
+                    [System.Windows.Forms.SendKeys]::SendWait("{send_key}")
+                    Start-Sleep -Milliseconds 100
+                    '''
+                    
+                    result = subprocess.run(["powershell", "-Command", ps_script], 
+                                shell=True,
+                                capture_output=True,
+                                text=True)
+                    
+                    if VERBOSE:
+                        print(f">>> PowerShell key press output: {result.stdout}")
+                        if result.stderr:
+                            print(f">>> PowerShell key press error: {result.stderr}")
+                    
+                    # Method 2: Try Windows API directly for common keys
+                    if key in ["space", "Return", "Escape", "Page_Down", "Page_Up", "Right", "Left", "Up", "Down"]:
+                        vk_mapping = {
+                            "space": 0x20,     # VK_SPACE
+                            "Return": 0x0D,    # VK_RETURN
+                            "Escape": 0x1B,    # VK_ESCAPE
+                            "Page_Down": 0x22, # VK_NEXT
+                            "Page_Up": 0x21,   # VK_PRIOR
+                            "Right": 0x27,     # VK_RIGHT
+                            "Left": 0x25,      # VK_LEFT
+                            "Up": 0x26,        # VK_UP
+                            "Down": 0x28       # VK_DOWN
+                        }
+                        
+                        vk_code = vk_mapping.get(key)
+                        if vk_code:
+                            win32_script = f'''
+                            Add-Type -TypeDefinition @"
+                            using System;
+                            using System.Runtime.InteropServices;
+                            
+                            public class KeyboardInput
+                            {{
+                                [DllImport("user32.dll")]
+                                public static extern IntPtr GetForegroundWindow();
+                                
+                                [DllImport("user32.dll")]
+                                public static extern bool PostMessage(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
+                                
+                                public const uint WM_KEYDOWN = 0x0100;
+                                public const uint WM_KEYUP = 0x0101;
+                            }}
+                            "@
+                            
+                            $hwnd = [KeyboardInput]::GetForegroundWindow()
+                            if ($hwnd -ne [IntPtr]::Zero) {{
+                                Write-Output "Found foreground window: $hwnd"
+                                Write-Output "Sending VK code: {vk_code}"
+                                [KeyboardInput]::PostMessage($hwnd, [KeyboardInput]::WM_KEYDOWN, [IntPtr]{vk_code}, [IntPtr]::Zero)
+                                Start-Sleep -Milliseconds 50
+                                [KeyboardInput]::PostMessage($hwnd, [KeyboardInput]::WM_KEYUP, [IntPtr]{vk_code}, [IntPtr]::Zero)
+                            }} else {{
+                                Write-Output "No foreground window found"
+                            }}
+                            '''
+                            
+                            win32_result = subprocess.run(["powershell", "-Command", win32_script], 
+                                        shell=True,
+                                        capture_output=True,
+                                        text=True)
+                            
+                            if VERBOSE:
+                                print(f">>> Win32 API key press output: {win32_result.stdout}")
+                    
+                    print(f">>> Pressed key {key} using Windows methods")
+                    return True
+                except Exception as e:
+                    print(f">>> Windows key press failed: {e}")
+                    return False
+            
+            # Last resort if all else fails
+            print(f">>> Warning: Could not press key {key} with reliable methods")
+            return False
+            
         except Exception as e:
             print(f">>> Error pressing key: {e}")
             return False

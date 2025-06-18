@@ -35,14 +35,54 @@ class SoundcloudModule(BaseBrowserModule):
             # Wait for track page to load
             time.sleep(5)
             
-            # Click on the upper part of the page to play music
-            print(">>> Clicking on upper part of the page to play music")
-            self.click(800, 400)
+            # Multiple methods to ensure music plays
+            print(">>> Using multiple methods to start music playback")
             
-            # Also try the space key as a fallback
-            time.sleep(1)
-            self.press_key("space")
+            # Method 1: Try using pyautogui to click at the exact center of the play button
+            try:
+                import pyautogui
+                # Get screen size
+                screen_width, screen_height = pyautogui.size()
+                
+                # First click on center of screen
+                center_x, center_y = screen_width // 2, screen_height // 2
+                print(f">>> Clicking center of screen ({center_x}, {center_y})")
+                pyautogui.click(center_x, center_y)
+                time.sleep(1)
+                
+                # Then try clicking on likely play button positions
+                play_positions = [
+                    (center_x, center_y - 100),  # Above center
+                    (center_x - 200, center_y),  # Left of center
+                    (center_x, center_y - 50),   # Slightly above center
+                    (center_x - 100, center_y),  # Slightly left of center
+                ]
+                
+                for pos in play_positions:
+                    print(f">>> Clicking potential play button at {pos}")
+                    pyautogui.click(pos[0], pos[1])
+                    time.sleep(0.5)
+                
+            except ImportError:
+                # Fallback to multiple clicks at different positions
+                for pos in [(800, 400), (500, 300), (300, 400), (700, 300)]:
+                    print(f">>> Clicking position {pos}")
+                    self.click(pos[0], pos[1])
+                    time.sleep(1)
             
+            # Method 2: Press space key multiple times
+            for _ in range(3):
+                print(">>> Pressing space key to play/pause")
+                self.press_key("space")
+                time.sleep(0.5)
+            
+            # Method 3: Press J and K keys (common media player shortcuts)
+            print(">>> Trying media player shortcuts")
+            for key in ["j", "k", "l"]:
+                self.press_key(key)
+                time.sleep(0.5)
+            
+            # Wait a bit to let music start
             print(">>> Track should be playing now")
             time.sleep(5)
             
@@ -53,10 +93,6 @@ class SoundcloudModule(BaseBrowserModule):
             )
             
             print(f">>> Listening to music for {listen_time} seconds")
-            
-            # Make sure playback starts by pressing space
-            self.press_key("space")
-            time.sleep(1)
             
             # Simulate periodic interactions while listening
             intervals = min(10, max(2, listen_time // 30))
