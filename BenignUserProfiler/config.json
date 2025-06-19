@@ -1,5 +1,5 @@
 {
-  "custom_service": {
+  "custom_network": {
     "type": "HTTP",
     "website": "custom_service",
     "custom_service_url": "http://192.168.1.55",

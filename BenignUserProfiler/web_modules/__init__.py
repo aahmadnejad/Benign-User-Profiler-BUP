@@ -5,7 +5,7 @@ from .soundcloud import SoundcloudModule
 from .image_download import ImageDownloadModule
 from .youtube import YoutubeModule
 from .web_browse import WebBrowseModule
-from .custom_service import CustomServiceModule
+from .custom_network_service import CustomServiceModule
 
 def get_module(module_type, headless=False):
     modules = {
