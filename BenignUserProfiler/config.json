@@ -1,4 +1,21 @@
 {
+  "custom_service": {
+    "type": "HTTP",
+    "website": "custom_service",
+    "custom_service_url": "http://192.168.1.55",
+    "scp_username": "capwifi",
+    "scp_password": "bccc1234",
+    "scp_host": "192.68.1.55",
+    "scp_upload_path": "~/file-server-uploads",
+    "frequency": 1,
+    "time_interval": [3600, 7200],
+    "start_time": "10:00",
+    "start_time_format": "%H:%M",
+    "work_hours": {
+      "start": "09:00",
+      "end": "17:00"
+    }
+  },
   "web_browsing": {
     "type": "HTTP",
     "randomize": true,

@@ -5,13 +5,15 @@ from .soundcloud import SoundcloudModule
 from .image_download import ImageDownloadModule
 from .youtube import YoutubeModule
 from .web_browse import WebBrowseModule
+from .custom_service import CustomServiceModule
 
 def get_module(module_type, headless=False):
     modules = {
         "soundcloud": SoundcloudModule,
         "download": ImageDownloadModule,
         "youtube": YoutubeModule,
-        "web": WebBrowseModule
+        "web": WebBrowseModule,
+        "custom_service": CustomServiceModule
     }
     
     if module_type.lower() in modules:
