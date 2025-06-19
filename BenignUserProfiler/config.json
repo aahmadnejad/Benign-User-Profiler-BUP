@@ -121,6 +121,22 @@
       "end": "17:00"
     }
   },
+  "firefox_bar_search": {
+    "type": "HTTP",
+    "website": "firefox_search",
+    "firefox_search_terms": ["weather forecast", "local news", "latest movies", "popular songs", "recent sports events"],
+    "click_results": true,
+    "min_results_to_visit": 1,
+    "max_results_to_visit": 2,
+    "frequency": 2,
+    "time_interval": [2400, 4800],
+    "start_time": "11:00",
+    "start_time_format": "%H:%M",
+    "work_hours": {
+      "start": "09:00",
+      "end": "17:00"
+    }
+  },
   "ping_scan": {
     "type": "CMD",
     "commands": [

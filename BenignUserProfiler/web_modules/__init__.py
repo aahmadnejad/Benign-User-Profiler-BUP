@@ -6,6 +6,7 @@ from .image_download import ImageDownloadModule
 from .youtube import YoutubeModule
 from .web_browse import WebBrowseModule
 from .custom_network_service import CustomServiceModule
+from .firefox_search import FirefoxSearchModule
 
 def get_module(module_type, headless=False):
     modules = {
@@ -13,7 +14,8 @@ def get_module(module_type, headless=False):
         "download": ImageDownloadModule,
         "youtube": YoutubeModule,
         "web": WebBrowseModule,
-        "custom_service": CustomServiceModule
+        "custom_service": CustomServiceModule,
+        "firefox_search": FirefoxSearchModule
     }
     
     if module_type.lower() in modules:

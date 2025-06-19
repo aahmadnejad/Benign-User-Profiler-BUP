@@ -62,6 +62,9 @@ class HTTPModel(TrafficModel):
                     module = get_module("web", self.headless)
                     self.model_config["website"] = "https://www.google.com"
                     module.execute(self.model_config)
+                elif website == "firefox_search":
+                    module = get_module("firefox_search", self.headless)
+                    module.execute(self.model_config)
                 elif website == "custom_service":
                     module = get_module("custom_service", self.headless)
                     module.execute(self.model_config)
@@ -88,6 +91,9 @@ class HTTPModel(TrafficModel):
                         elif site_type == "google":
                             module = get_module("web", self.headless)
                             self.model_config["website"] = "https://www.google.com"
+                            module.execute(self.model_config)
+                        elif site_type == "firefox_search":
+                            module = get_module("firefox_search", self.headless)
                             module.execute(self.model_config)
                         elif site_type == "custom_service":
                             module = get_module("custom_service", self.headless)

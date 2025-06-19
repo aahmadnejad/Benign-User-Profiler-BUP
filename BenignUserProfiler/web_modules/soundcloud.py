@@ -37,43 +37,53 @@ class SoundcloudModule(BaseBrowserModule):
                 time.sleep(random.uniform(3, 5))
                 
                 # Try to find and click on the search box
+                # Wait for page to fully load
+                time.sleep(random.uniform(3, 5))
+                
                 try:
                     import pyautogui
                     screen_width, screen_height = pyautogui.size()
                     
-                    # Try several locations where the search button might be
+                    # Try locations for SoundCloud's search box (not browser search bar)
+                    # These positions target lower in the page to avoid browser's search bar
                     search_positions = [
-                        (screen_width // 2, 80),           # Middle top
-                        (screen_width * 0.7, 80),          # Right top
-                        (screen_width * 0.8, 80),          # Far right top
-                        (screen_width * 0.9, 80),          # Very far right top
-                        (screen_width // 4, 80)            # Left top
+                        (screen_width // 2, 150),          # Middle of SoundCloud search
+                        (screen_width * 0.7, 150),         # Right side of SoundCloud search
+                        (screen_width * 0.8, 150),         # Far right of SoundCloud search
+                        (screen_width * 0.3, 150),         # Left side of SoundCloud search
+                        (screen_width * 0.5, 200)          # Lower position as fallback
                     ]
+                    
+                    print(">>> Clicking on SoundCloud's search box (avoiding browser search bar)")
                     
                     # Try clicking on each possible search position
                     for pos in search_positions:
-                        print(f">>> Clicking potential search box at {pos}")
+                        print(f">>> Clicking SoundCloud search box at {pos}")
                         pyautogui.click(pos[0], pos[1])
-                        time.sleep(0.5)
+                        time.sleep(1.0)  # Longer wait to ensure focus
                         
                         # Type the search term
                         pyautogui.write(search_term)
                         time.sleep(0.5)
                         pyautogui.press('enter')
-                        time.sleep(0.5)
+                        time.sleep(1.0)
                 except ImportError:
                     # Fallback to multiple clicks
-                    search_positions = [(900, 80), (800, 80), (700, 80), (600, 80)]
+                    # Using positions further down in the page to target SoundCloud's search
+                    search_positions = [(500, 150), (600, 150), (400, 150), (500, 200)]
+                    
+                    print(">>> Clicking on SoundCloud's search box (avoiding browser search bar)")
                     for pos in search_positions:
+                        print(f">>> Clicking SoundCloud search box at {pos}")
                         self.click(pos[0], pos[1])
-                        time.sleep(0.5)
+                        time.sleep(1.0)  # Longer wait to ensure focus
                         
                         # Type the search term using base_browser methods
                         for char in search_term:
                             self.press_key(char)
                             time.sleep(0.05)
                         self.press_key("Return")
-                        time.sleep(0.5)
+                        time.sleep(1.0)
             
             # Wait for search results to load
             time.sleep(random.uniform(5, 10))

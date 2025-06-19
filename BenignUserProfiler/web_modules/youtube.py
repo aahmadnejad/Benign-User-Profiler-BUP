@@ -34,16 +34,21 @@ class YoutubeModule(BaseBrowserModule):
                 # Interactive search using search box
                 print(">>> Using interactive search method")
                 
-                # Click on search box - try several possible positions
+                # Click on YouTube's search box (not Firefox search bar) - try several possible positions
+                # These positions target lower in the page to avoid browser's search bar
                 search_box_positions = [
-                    (500, 40),   # Center top
-                    (600, 40),   # Right top
-                    (400, 40)    # Left top
+                    (500, 120),   # Center of YouTube search bar 
+                    (600, 120),   # Right side of YouTube search bar
+                    (400, 120)    # Left side of YouTube search bar
                 ]
                 
-                # Try clicking on search box
+                # Wait longer for page to fully load
+                time.sleep(random.uniform(2, 4))
+                
+                # Try clicking on YouTube's search box
+                print(">>> Clicking on YouTube's search box (avoiding browser search bar)")
                 for pos in search_box_positions:
-                    print(f">>> Clicking search box at position {pos}")
+                    print(f">>> Clicking YouTube search box at position {pos}")
                     try:
                         import pyautogui
                         screen_width, screen_height = pyautogui.size()
@@ -53,7 +58,7 @@ class YoutubeModule(BaseBrowserModule):
                         pyautogui.click(scaled_x, scaled_y)
                     except ImportError:
                         self.click(pos[0], pos[1])
-                    time.sleep(0.5)
+                    time.sleep(1.0)  # Longer wait to ensure focus
                 
                 # Type the search term
                 print(f">>> Typing search term: {search_term}")

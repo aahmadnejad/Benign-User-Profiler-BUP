@@ -71,7 +71,15 @@ class CustomServiceModule(BaseBrowserModule):
                 time.sleep(random.uniform(2, 4))
             
             # 4. Upload a TXT file to the API
-            self._upload_file_to_api(base_url)
+            print("\n" + "="*50)
+            print(">>> STARTING API FILE UPLOAD")
+            print("="*50)
+            upload_result = self._upload_file_to_api(base_url)
+            if upload_result:
+                print(">>> API UPLOAD COMPLETED SUCCESSFULLY")
+            else:
+                print(">>> API UPLOAD FAILED")
+            print("="*50 + "\n")
             time.sleep(random.uniform(3, 5))
             
             # 5. Visit the main page again using browser command
@@ -183,7 +191,16 @@ class CustomServiceModule(BaseBrowserModule):
                 time.sleep(random.uniform(5, 10))
             
             # 8. Upload a random file to SCP server
-            self._upload_to_scp_server(scp_host, username, password, upload_path)
+            print("\n" + "="*50)
+            print(">>> STARTING SCP FILE UPLOAD")
+            print(f">>> Host: {scp_host}, Username: {username}, Path: {upload_path}")
+            print("="*50)
+            scp_result = self._upload_to_scp_server(scp_host, username, password, upload_path)
+            if scp_result:
+                print(">>> SCP UPLOAD COMPLETED SUCCESSFULLY")
+            else:
+                print(">>> SCP UPLOAD FAILED")
+            print("="*50 + "\n")
             
             # Close browser when done
             print(">>> Closing browser")
@@ -279,9 +296,22 @@ class CustomServiceModule(BaseBrowserModule):
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             
-            # Connect to the server
+            # Connect to the server with retry
             print(f">>> Connecting to SCP server: {host}")
-            ssh.connect(hostname=host, username=username, password=password)
+            max_retries = 3
+            for retry in range(max_retries):
+                try:
+                    print(f">>> Connection attempt {retry+1}/{max_retries}")
+                    ssh.connect(hostname=host, username=username, password=password, timeout=10)
+                    print(">>> Connection successful")
+                    break
+                except Exception as e:
+                    print(f">>> Connection attempt {retry+1} failed: {e}")
+                    if retry < max_retries - 1:
+                        print(f">>> Retrying in 3 seconds...")
+                        time.sleep(3)
+                    else:
+                        raise
             
             # Create SFTPClient
             sftp = ssh.open_sftp()
