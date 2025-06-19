@@ -405,7 +405,7 @@
         "platform": "linux",
         "description": "Open Software Center",
         "show_output": false,
-        "use_time": [120, 600]
+        "use_time": [520, 900]
       },
       {
         "command": "rhythmbox",
@@ -415,11 +415,18 @@
         "use_time": [120, 600]
       },
       {
-        "command": "gnome-terminal",
+        "command": "gnome-clocks",
         "platform": "linux",
-        "description": "Open Terminal",
+        "description": "Open clocks",
         "show_output": false,
         "use_time": [120, 600]
+      },
+      {
+        "command": "gnome-calendar",
+        "platform": "linux",
+        "description": "Open calendar",
+        "show_output": false,
+        "use_time": [160, 800]
       }
     ],
     "create_office_docs": true,

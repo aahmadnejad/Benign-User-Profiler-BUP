@@ -247,7 +247,7 @@ class CustomServiceModule(BaseBrowserModule):
         return self.generated_files
     
     def _upload_file_to_api(self, base_url):
-        """Upload a text file to the API endpoint"""
+        """Upload a text file to the API endpoint using POST method"""
         if not self.generated_files:
             print(">>> No files available for upload")
             return False
@@ -255,25 +255,66 @@ class CustomServiceModule(BaseBrowserModule):
         upload_url = urljoin(base_url, "/api/upload")
         file_to_upload = random.choice(self.generated_files)
         
-        print(f">>> Uploading file to API: {file_to_upload} -> {upload_url}")
+        print(f">>> POST API Upload: {file_to_upload} -> {upload_url}")
+        print(f">>> File size: {os.path.getsize(file_to_upload)} bytes")
         
         try:
-            # Use requests to upload the file
+            # Make sure the file is accessible and readable
+            if not os.path.exists(file_to_upload):
+                print(f">>> Error: File {file_to_upload} does not exist")
+                return False
+                
+            # Use requests to upload the file via POST
             with open(file_to_upload, 'rb') as f:
+                # Important: Using 'files' parameter name as requested
                 files = {'files': (os.path.basename(file_to_upload), f, 'text/plain')}
                 
                 # Use the same user agent as browser for consistency
-                headers = {'User-Agent': random.choice(self.user_agents)}
+                headers = {
+                    'User-Agent': random.choice(self.user_agents),
+                    # No Content-Type header - requests will set correct multipart/form-data
+                }
                 
-                # Perform the upload
-                response = requests.post(upload_url, files=files, headers=headers)
+                print(f">>> Sending POST request with file '{os.path.basename(file_to_upload)}'")
+                print(f">>> Parameter name: 'files'")
+                
+                # Perform the upload - explicitly using POST method
+                start_time = time.time()
+                response = requests.post(
+                    url=upload_url,
+                    files=files,
+                    headers=headers,
+                    timeout=30  # 30 second timeout
+                )
+                end_time = time.time()
+                upload_time = end_time - start_time
+                
+                # Log detailed response
+                print(f">>> Upload took {upload_time:.2f} seconds")
+                print(f">>> Response status code: {response.status_code}")
+                print(f">>> Response headers: {response.headers}")
                 
                 if response.status_code == 200 or response.status_code == 201:
-                    print(f">>> File upload successful, status code: {response.status_code}")
+                    print(f">>> File upload successful via POST")
+                    try:
+                        print(f">>> Response content: {response.text[:200]}")
+                    except:
+                        print(">>> Could not display response content")
                     return True
                 else:
                     print(f">>> File upload failed, status code: {response.status_code}")
-                    print(f">>> Response: {response.text[:100]}...")
+                    print(f">>> Response: {response.text[:200]}")
+                    
+                    # Try again with different parameter name as fallback
+                    print(">>> Trying alternative parameter name 'file'")
+                    with open(file_to_upload, 'rb') as f2:
+                        alt_files = {'file': (os.path.basename(file_to_upload), f2, 'text/plain')}
+                        alt_response = requests.post(upload_url, files=alt_files, headers=headers)
+                        
+                        if alt_response.status_code == 200 or alt_response.status_code == 201:
+                            print(f">>> Alternate upload successful, status code: {alt_response.status_code}")
+                            return True
+                    
                     return False
                 
         except Exception as e:
@@ -281,7 +322,7 @@ class CustomServiceModule(BaseBrowserModule):
             return False
     
     def _upload_to_scp_server(self, host, username, password, remote_path):
-        """Upload a random file to SCP server"""
+        """Upload a random file to SCP server using scp command"""
         if not self.generated_files:
             print(">>> No files available for SCP upload")
             return False
@@ -292,67 +333,93 @@ class CustomServiceModule(BaseBrowserModule):
         print(f">>> Username: {username}, Remote path: {remote_path}")
         
         try:
-            # Create SSH client
-            ssh = paramiko.SSHClient()
-            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            # Create a temporary file with the password for sshpass
+            password_file = os.path.join(self.temp_dir, "scp_password.txt")
+            with open(password_file, 'w') as f:
+                f.write(password)
+            os.chmod(password_file, 0o600)  # Secure the password file
             
-            # Connect to the server with retry
-            print(f">>> Connecting to SCP server: {host}")
-            max_retries = 3
-            for retry in range(max_retries):
-                try:
-                    print(f">>> Connection attempt {retry+1}/{max_retries}")
-                    ssh.connect(hostname=host, username=username, password=password, timeout=10)
-                    print(">>> Connection successful")
-                    break
-                except Exception as e:
-                    print(f">>> Connection attempt {retry+1} failed: {e}")
-                    if retry < max_retries - 1:
-                        print(f">>> Retrying in 3 seconds...")
-                        time.sleep(3)
-                    else:
-                        raise
+            # Construct the scp command using sshpass for password
+            # Format: scp file.txt username@SERVER_IP:/path/to/destination
+            destination = f"{username}@{host}:{remote_path}"
             
-            # Create SFTPClient
-            sftp = ssh.open_sftp()
-            
-            # Make sure remote directory exists
+            # Try with sshpass first (most reliable for automated password entry)
             try:
-                # Resolve ~ in remote path if present
-                if remote_path.startswith('~'):
-                    stdin, stdout, stderr = ssh.exec_command('echo $HOME')
-                    home_dir = stdout.read().decode().strip()
-                    remote_path = remote_path.replace('~', home_dir)
+                print(f">>> Attempting SCP upload with sshpass: {file_to_upload} -> {destination}")
+                command = f"sshpass -f {password_file} scp -o StrictHostKeyChecking=no {file_to_upload} {destination}"
                 
-                # Create directory if it doesn't exist
-                ssh.exec_command(f"mkdir -p {remote_path}")
+                print(f">>> Running command: {command}")
+                start_time = time.time()
+                
+                process = subprocess.Popen(
+                    command,
+                    shell=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True
+                )
+                
+                # Wait for command to complete with timeout
+                stdout, stderr = process.communicate(timeout=30)
+                
+                # Calculate statistics
+                end_time = time.time()
+                upload_time = end_time - start_time
+                file_size_mb = os.path.getsize(file_to_upload) / (1024 * 1024)
+                
+                # Check if successful
+                if process.returncode == 0:
+                    print(f">>> Upload completed successfully in {upload_time:.2f} seconds")
+                    print(f">>> Uploaded {file_size_mb:.2f} MB")
+                    
+                    if upload_time > 0:
+                        speed = file_size_mb / upload_time
+                        print(f">>> Average upload speed: {speed:.2f} MB/s")
+                else:
+                    print(f">>> Upload failed with code {process.returncode}")
+                    if stdout:
+                        print(f">>> Command output: {stdout}")
+                    if stderr:
+                        print(f">>> Command error: {stderr}")
+                    raise Exception(f"SCP command failed with code {process.returncode}")
+                
+            except (subprocess.SubprocessError, FileNotFoundError) as e:
+                print(f">>> Error with sshpass approach: {e}")
+                print(">>> Falling back to expect script method")
+                
+                # Create an expect script for handling interactive password prompt
+                expect_script = os.path.join(self.temp_dir, "scp_expect.exp")
+                with open(expect_script, 'w') as f:
+                    f.write(f'''#!/usr/bin/expect -f
+                    set timeout 30
+                    spawn scp -o StrictHostKeyChecking=no {file_to_upload} {destination}
+                    expect "password:" {{ send "{password}\\r" }}
+                    expect eof
+                    ''')
+                os.chmod(expect_script, 0o700)  # Make executable
+                
+                print(f">>> Running expect script for SCP upload")
+                process = subprocess.run(
+                    expect_script,
+                    shell=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True
+                )
+                
+                if process.returncode == 0:
+                    print(">>> Upload completed successfully with expect script")
+                else:
+                    print(f">>> Upload with expect script failed: {process.stderr}")
+                    raise Exception("SCP with expect script failed")
+            
+            # Clean up temporary files
+            try:
+                os.remove(password_file)
+                if os.path.exists(expect_script):
+                    os.remove(expect_script)
             except Exception as e:
-                print(f">>> Warning creating remote directory: {e}")
-            
-            # Determine remote file path
-            remote_file = f"{remote_path}/{os.path.basename(file_to_upload)}"
-            
-            # Upload the file
-            print(f">>> Uploading: {file_to_upload} -> {remote_file}")
-            start_time = time.time()
-            
-            sftp.put(file_to_upload, remote_file)
-            
-            # Calculate statistics
-            end_time = time.time()
-            upload_time = end_time - start_time
-            file_size_mb = os.path.getsize(file_to_upload) / (1024 * 1024)
-            
-            print(f">>> Upload completed in {upload_time:.2f} seconds")
-            print(f">>> Uploaded {file_size_mb:.2f} MB")
-            
-            if upload_time > 0:
-                speed = file_size_mb / upload_time
-                print(f">>> Average upload speed: {speed:.2f} MB/s")
-            
-            # Close connections
-            sftp.close()
-            ssh.close()
+                print(f">>> Warning: Could not clean up temporary files: {e}")
             
             return True
             
