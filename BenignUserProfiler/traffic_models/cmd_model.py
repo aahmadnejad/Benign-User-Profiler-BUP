@@ -307,10 +307,43 @@ class CMDModel(TrafficModel):
                 if random.random() < 0.7:  # 70% chance of interaction
                     self._simulate_keyboard_input(system)
                 
-                # Keep app open for random duration
+                # Keep app open for random duration with countdown for problematic apps
                 runtime = random.uniform(min_time, max_time)
-                print(f">>> Keeping {app_name} open for {runtime:.1f} seconds")
-                time.sleep(runtime)
+                
+                # For LibreOffice on Linux, show a countdown to help with dialog prompts
+                if system == "linux" and "libreoffice" in app_name.lower():
+                    print(f">>> LibreOffice detected - showing countdown before closing")
+                    countdown_interval = 5
+                    total_time = 0
+                    while total_time < runtime:
+                        time_left = runtime - total_time
+                        if time_left <= countdown_interval:
+                            print(f">>> Closing {app_name} in {time_left:.1f} seconds...")
+                            time.sleep(time_left)
+                            total_time += time_left
+                        else:
+                            print(f">>> Keeping {app_name} open - {time_left:.1f} seconds remaining")
+                            time.sleep(countdown_interval)
+                            total_time += countdown_interval
+                # For Windows, always use a countdown approach
+                elif system == "windows":
+                    print(f">>> Windows app - showing countdown before closing")
+                    countdown_interval = 10
+                    total_time = 0
+                    while total_time < runtime:
+                        time_left = runtime - total_time
+                        if time_left <= countdown_interval:
+                            print(f">>> Closing {app_name} in {time_left:.1f} seconds...")
+                            time.sleep(time_left)
+                            total_time += time_left
+                        else:
+                            print(f">>> Keeping {app_name} open - {time_left:.1f} seconds remaining")
+                            time.sleep(countdown_interval)
+                            total_time += countdown_interval
+                else:
+                    # For other apps, just use a simple wait
+                    print(f">>> Keeping {app_name} open for {runtime:.1f} seconds")
+                    time.sleep(runtime)
                 
                 # Close the app
                 self._close_application(app_name, system)

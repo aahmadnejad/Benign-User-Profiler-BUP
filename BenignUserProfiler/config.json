@@ -328,12 +328,11 @@
     "windows_apps": [
       "calc.exe",
       "notepad.exe",
-      "cmd.exe",
       "explorer.exe",
+      "control.exe", 
       "control.exe",
       "taskmgr.exe",
-      "mspaint.exe",
-      "wordpad.exe"
+      "mspaint.exe"
     ],
     "min_apps_to_open": 2,
     "max_apps_to_open": 5,
