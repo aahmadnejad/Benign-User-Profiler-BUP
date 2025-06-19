@@ -174,8 +174,23 @@ class WebBrowseModule(BaseBrowserModule):
         search_term = random.choice(config["search_terms"])
         print(f">>> Will search for: {search_term}")
         
-        # Type the search term into the search box
-        self.keyboard_input(search_term)
+        # Google search box already has focus by default, just type directly
+        # Wait a bit to ensure page is fully loaded and search box has focus
+        time.sleep(random.uniform(1, 2))
+        
+        # Type the search term directly - no need to click, as Google focuses on the input by default
+        print(">>> Typing directly into Google's search box (should have focus by default)")
+        try:
+            import pyautogui
+            # Type character by character with random delays for realism
+            for char in search_term:
+                pyautogui.write(char)
+                time.sleep(random.uniform(0.05, 0.2))  # Random delay between keystrokes
+            time.sleep(0.5)
+            pyautogui.press('enter')
+        except ImportError:
+            # Fallback to keyboard_input method
+            self.keyboard_input(search_term)
         
         # Wait for search results
         time.sleep(random.uniform(3, 6))
