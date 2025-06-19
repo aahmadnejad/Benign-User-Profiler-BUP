@@ -323,7 +323,9 @@
       "gnome-software",
       "gnome-system-monitor",
       "evince",
-      "file-roller"
+      "file-roller",
+      "rhythmbox",
+      "snap-store"
     ],
     "windows_apps": [
       "calc.exe",
@@ -331,8 +333,10 @@
       "explorer.exe",
       "control.exe", 
       "control.exe",
-      "taskmgr.exe",
-      "mspaint.exe"
+      "cmd.exe",
+      "mspaint.exe",
+      "copilot.exe",
+      "msedge.exe"
     ],
     "min_apps_to_open": 2,
     "max_apps_to_open": 5,
@@ -374,23 +378,23 @@
     ],
     "linux_commands": [
       {
-        "command": "libreoffice --writer",
+        "command": "gnome-software",
         "platform": "linux",
-        "description": "Open LibreOffice Writer",
+        "description": "Open Software Center",
         "show_output": false,
         "use_time": [120, 600]
       },
       {
-        "command": "libreoffice --calc",
+        "command": "rhythmbox",
         "platform": "linux",
-        "description": "Open LibreOffice Calc",
+        "description": "Open Rhythmbox Music Player",
         "show_output": false,
         "use_time": [120, 600]
       },
       {
-        "command": "libreoffice --impress",
+        "command": "gnome-terminal",
         "platform": "linux",
-        "description": "Open LibreOffice Impress",
+        "description": "Open Terminal",
         "show_output": false,
         "use_time": [120, 600]
       }

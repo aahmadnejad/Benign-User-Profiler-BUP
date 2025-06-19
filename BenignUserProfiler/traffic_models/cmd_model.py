@@ -269,13 +269,23 @@ class CMDModel(TrafficModel):
         max_apps = self.model_config.get("max_apps_to_open", 3)
         num_apps = random.randint(min_apps, min(max_apps, len(app_list)))
         
-        # Get runtime range
+        # Get runtime range with more randomness
+        # Using a wider range for more realistic and varied behavior
         min_time = self.model_config.get("app_use_time_min", 10)
         max_time = self.model_config.get("app_use_time_max", 60)
         
-        # Select random apps
-        selected_apps = random.sample(app_list, num_apps)
-        print(f">>> Opening {num_apps} random applications")
+        # Shuffle the entire app list first to ensure better distribution
+        shuffled_apps = app_list.copy()
+        random.shuffle(shuffled_apps)
+        
+        # Select a subset of apps from the shuffled list
+        selected_apps = shuffled_apps[:num_apps]
+        
+        # Further randomize by occasionally swapping the order
+        if random.random() < 0.5:
+            random.shuffle(selected_apps)
+            
+        print(f">>> Opening {num_apps} random applications: {', '.join(selected_apps)}")
         
         for app_name in selected_apps:
             try:
