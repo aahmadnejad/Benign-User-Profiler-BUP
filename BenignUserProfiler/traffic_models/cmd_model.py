@@ -220,7 +220,7 @@ class CMDModel(TrafficModel):
             # Keep app open for specified duration
             app_runtime = app_config.get("runtime", 10)
             print(f">>> Keeping {app_name} open for {app_runtime} seconds")
-            time.sleep(app_runtime)
+
             
             # Close app if specified
             if app_config.get("close_after", True):
