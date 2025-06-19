@@ -240,12 +240,34 @@ class CMDModel(TrafficModel):
                     stderr=subprocess.DEVNULL
                 )
             elif system == "linux":
-                # Use killall on Linux
-                subprocess.run(
-                    ["killall", app_name],
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL
-                )
+                print(f">>> Closing Linux application: {app_name}")
+                # Try multiple approaches to ensure application is closed
+                try:
+                    # Method 1: Use killall
+                    print(f">>> Attempting to close {app_name} with killall")
+                    subprocess.run(
+                        ["killall", "-9", app_name],
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL
+                    )
+                except Exception as e:
+                    print(f">>> killall failed: {e}")
+                
+                try:
+                    # Method 2: Use pkill (more flexible than killall)
+                    print(f">>> Attempting to close {app_name} with pkill")
+                    subprocess.run(
+                        ["pkill", "-9", "-f", app_name],
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL
+                    )
+                except Exception as e:
+                    print(f">>> pkill failed: {e}")
+                    
+                # Method 3: If we saved the PID earlier, we could kill by PID
+                # But we'll skip that as we don't have a PID tracking system currently
+                
+                print(f">>> Cleanup complete for {app_name}")
             # Wait a moment for the app to close
             time.sleep(1)
         except Exception as e:
@@ -296,19 +318,47 @@ class CMDModel(TrafficModel):
                     # Use start command on Windows
                     subprocess.Popen(f'start "" "{app_name}"', shell=True)
                 elif system == "linux":
-                    # Use direct command on Linux, output to /dev/null
+                    # Use direct command on Linux with nohup to prevent hanging
                     try:
-                        subprocess.Popen([app_name], 
-                                        stdout=subprocess.DEVNULL, 
-                                        stderr=subprocess.DEVNULL)
-                    except:
-                        # Fallback to xdg-open if available
+                        # Add nohup to prevent script from waiting for application to close
+                        # start-stop-daemon can also be used as an alternative
+                        command = f"nohup {app_name} > /dev/null 2>&1 & echo $!"
+                        print(f">>> Running command: {command}")
+                        
+                        # Use shell=True to allow nohup and redirection
+                        process = subprocess.Popen(
+                            command,
+                            shell=True,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE,
+                            text=True
+                        )
+                        
+                        # Get the PID (not waiting for completion)
+                        output, error = process.communicate(timeout=2)
+                        if output:
+                            pid = output.strip()
+                            print(f">>> Started {app_name} with PID {pid}")
+                        if error:
+                            print(f">>> Error starting {app_name}: {error}")
+                            
+                    except subprocess.TimeoutExpired:
+                        # If communication times out, process is still running
+                        print(f">>> {app_name} started (timeout on PID retrieval)")
+                    except Exception as e:
+                        # Fallback to xdg-open if direct launch fails
+                        print(f">>> Direct launch failed: {e}, trying xdg-open")
                         try:
-                            subprocess.Popen(["xdg-open", app_name], 
-                                            stdout=subprocess.DEVNULL, 
-                                            stderr=subprocess.DEVNULL)
-                        except Exception as e:
-                            print(f">>> Failed to open {app_name}: {e}")
+                            # Use xdg-open with nohup
+                            subprocess.Popen(
+                                f"nohup xdg-open {app_name} > /dev/null 2>&1 &", 
+                                shell=True,
+                                stdout=subprocess.DEVNULL, 
+                                stderr=subprocess.DEVNULL
+                            )
+                            print(f">>> Launched {app_name} using xdg-open")
+                        except Exception as e2:
+                            print(f">>> Failed to open {app_name}: {e2}")
                 
                 # Wait a moment for app to launch
                 time.sleep(random.uniform(2, 5))
