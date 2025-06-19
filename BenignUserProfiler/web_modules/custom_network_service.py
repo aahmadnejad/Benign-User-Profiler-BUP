@@ -8,6 +8,7 @@ import requests
 import paramiko
 from pathlib import Path
 from datetime import datetime
+from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 from .base_browser import BaseBrowserModule
 
