@@ -119,21 +119,46 @@ class CustomServiceModule(BaseBrowserModule):
                 self.scroll_down(1)
                 time.sleep(random.uniform(2, 4))
             
-            # Simulate reading HTML table and finding <a href> tags with class="download-link"
-            # In a real scenario, we would parse the HTML, but we'll simulate finding download links
-            simulated_download_paths = [
-                f"/downloads/document_{random.randint(1000, 9999)}.txt",
-                f"/downloads/report_{random.randint(1000, 9999)}.pdf",
-                f"/downloads/data_{random.randint(1000, 9999)}.csv",
-                f"/downloads/image_{random.randint(1000, 9999)}.jpg",
-                f"/downloads/config_{random.randint(1000, 9999)}.json",
-                f"/downloads/log_{random.randint(1000, 9999)}.txt"
-            ]
-            
-            print(f">>> Found {len(simulated_download_paths)} download links in the page")
-            
-            # Download 3 random files using browser commands
-            download_paths_to_use = random.sample(simulated_download_paths, 3)
+            # Actually parse the HTML to find the download links with BeautifulSoup
+            print(">>> Parsing HTML to find download links")
+            try:
+                # Get the page content
+                response = requests.get(files_url)
+                soup = BeautifulSoup(response.text, 'html.parser')
+                
+                # Find all <a> tags with class="download-link"
+                download_links = soup.find_all('a', class_='download-link')
+                
+                if not download_links:
+                    # If no download links found with that specific class, try finding any <a> tags
+                    download_links = soup.find_all('a', href=True)
+                    print(f">>> No specific download-link class found, using all {len(download_links)} links")
+                else:
+                    print(f">>> Found {len(download_links)} download links with class='download-link'")
+                
+                # Extract the href attributes
+                download_paths = [link['href'] for link in download_links if 'href' in link.attrs]
+                
+                if len(download_paths) == 0:
+                    print(">>> No download links found in page HTML")
+                    # Fallback to finding any href that looks like a file
+                    all_links = soup.find_all('a', href=True)
+                    download_paths = [link['href'] for link in all_links if '.' in link['href']]
+                    print(f">>> Fallback: found {len(download_paths)} potential file links")
+                
+                print(f">>> Found these download paths: {download_paths[:5]}")
+                
+                # Use up to 3 random download paths
+                download_paths_to_use = random.sample(download_paths, min(3, len(download_paths))) if download_paths else []
+                
+            except Exception as e:
+                print(f">>> Error parsing HTML: {e}")
+                # Fallback in case the HTML parsing fails
+                print(">>> Using fallback download paths")
+                download_paths_to_use = [
+                    f"/downloads/file_{random.randint(1000, 9999)}.txt",
+                    f"/downloads/file_{random.randint(1000, 9999)}.pdf"
+                ]
             
             for download_path in download_paths_to_use:
                 # Construct full URL by concatenating base_url with download path
