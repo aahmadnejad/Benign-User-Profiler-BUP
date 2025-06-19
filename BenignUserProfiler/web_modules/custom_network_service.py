@@ -32,8 +32,9 @@ class CustomServiceModule(BaseBrowserModule):
             
             print(f">>> Visiting custom service: {base_url}")
             
-            # 2. Visit the main page and scroll
-            if not self.browser_command(base_url):
+            # 2. Visit the main page and scroll - use additional_args to open in new tab
+            additional_args = ["-new-tab"] if self.os_type == "Linux" else []
+            if not self.browser_command(base_url, additional_args):
                 print(">>> Failed to open the main page")
                 return False
             
@@ -47,22 +48,24 @@ class CustomServiceModule(BaseBrowserModule):
                 self.scroll_down(1)
                 time.sleep(random.uniform(2, 4))
             
-            # 3. Visit the userguide route using browser command
-            userguide_url = urljoin(base_url, "/userguide")
-            print(f">>> Visiting userguide: {userguide_url}")
+            # 3. Visit the guide route using browser command
+            guide_url = urljoin(base_url, "/guide")
+            print(f">>> Visiting guide: {guide_url}")
             
-            if not self.browser_command(userguide_url):
-                print(">>> Failed to open userguide page")
+            # Use -new-tab to open in new tab
+            additional_args = ["-new-tab"] if self.os_type == "Linux" else []
+            if not self.browser_command(guide_url, additional_args):
+                print(">>> Failed to open guide page")
                 self.close_browser()
                 return False
             
-            print(">>> Successfully opened userguide, scrolling...")
+            print(">>> Successfully opened guide page, scrolling...")
             time.sleep(random.uniform(3, 5))
             
             # Scroll the userguide page
             scroll_count = random.randint(4, 7)
             for i in range(scroll_count):
-                print(f">>> Scrolling down userguide ({i+1}/{scroll_count})")
+                print(f">>> Scrolling down guide page ({i+1}/{scroll_count})")
                 self.scroll_down(1)
                 time.sleep(random.uniform(2, 4))
             
@@ -72,7 +75,8 @@ class CustomServiceModule(BaseBrowserModule):
             
             # 5. Visit the main page again using browser command
             print(f">>> Visiting main page again: {base_url}")
-            if not self.browser_command(base_url):
+            additional_args = ["-new-tab"] if self.os_type == "Linux" else []
+            if not self.browser_command(base_url, additional_args):
                 print(">>> Failed to return to main page")
                 self.close_browser()
                 return False
@@ -84,7 +88,8 @@ class CustomServiceModule(BaseBrowserModule):
             report_url = urljoin(base_url, "/report")
             print(f">>> Visiting report page to download: {report_url}")
             
-            if not self.browser_command(report_url):
+            additional_args = ["-new-tab"] if self.os_type == "Linux" else []
+            if not self.browser_command(report_url, additional_args):
                 print(">>> Failed to access report page")
                 self.close_browser()
                 return False
@@ -98,7 +103,8 @@ class CustomServiceModule(BaseBrowserModule):
             files_url = urljoin(base_url, "/files")
             print(f">>> Visiting files page: {files_url}")
             
-            if not self.browser_command(files_url):
+            additional_args = ["-new-tab"] if self.os_type == "Linux" else []
+            if not self.browser_command(files_url, additional_args):
                 print(">>> Failed to access files page")
                 self.close_browser()
                 return False
@@ -113,26 +119,32 @@ class CustomServiceModule(BaseBrowserModule):
                 self.scroll_down(1)
                 time.sleep(random.uniform(2, 4))
             
-            # Simulate reading HTML table and extracting filenames
-            simulated_filenames = [
-                f"document_{random.randint(1000, 9999)}.txt",
-                f"report_{random.randint(1000, 9999)}.pdf",
-                f"data_{random.randint(1000, 9999)}.csv",
-                f"image_{random.randint(1000, 9999)}.jpg",
-                f"config_{random.randint(1000, 9999)}.json",
-                f"log_{random.randint(1000, 9999)}.txt"
+            # Simulate reading HTML table and finding <a href> tags with class="download-link"
+            # In a real scenario, we would parse the HTML, but we'll simulate finding download links
+            simulated_download_paths = [
+                f"/downloads/document_{random.randint(1000, 9999)}.txt",
+                f"/downloads/report_{random.randint(1000, 9999)}.pdf",
+                f"/downloads/data_{random.randint(1000, 9999)}.csv",
+                f"/downloads/image_{random.randint(1000, 9999)}.jpg",
+                f"/downloads/config_{random.randint(1000, 9999)}.json",
+                f"/downloads/log_{random.randint(1000, 9999)}.txt"
             ]
             
-            print(f">>> Found {len(simulated_filenames)} files in the table")
+            print(f">>> Found {len(simulated_download_paths)} download links in the page")
             
             # Download 3 random files using browser commands
-            files_to_download = random.sample(simulated_filenames, 3)
+            download_paths_to_use = random.sample(simulated_download_paths, 3)
             
-            for file_name in files_to_download:
-                download_url = urljoin(base_url, f"/{file_name}")
+            for download_path in download_paths_to_use:
+                # Construct full URL by concatenating base_url with download path
+                download_url = urljoin(base_url, download_path)
+                file_name = os.path.basename(download_path)
+                
                 print(f">>> Downloading file: {file_name} from {download_url}")
                 
-                if not self.browser_command(download_url):
+                # Open in a new tab
+                additional_args = ["-new-tab"] if self.os_type == "Linux" else []
+                if not self.browser_command(download_url, additional_args):
                     print(f">>> Failed to download {file_name}")
                     continue
                 
