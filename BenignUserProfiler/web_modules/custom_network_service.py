@@ -6,6 +6,7 @@ import os
 import tempfile
 import requests
 import paramiko
+import subprocess
 from pathlib import Path
 from datetime import datetime
 from bs4 import BeautifulSoup
@@ -266,8 +267,8 @@ class CustomServiceModule(BaseBrowserModule):
                 
             # Use requests to upload the file via POST
             with open(file_to_upload, 'rb') as f:
-                # Important: Using 'files' parameter name as requested
-                files = {'files': (os.path.basename(file_to_upload), f, 'text/plain')}
+                # Important: Using 'file' parameter name as requested
+                files = {'file': (os.path.basename(file_to_upload), f, 'text/plain')}
                 
                 # Use the same user agent as browser for consistency
                 headers = {
@@ -276,7 +277,7 @@ class CustomServiceModule(BaseBrowserModule):
                 }
                 
                 print(f">>> Sending POST request with file '{os.path.basename(file_to_upload)}'")
-                print(f">>> Parameter name: 'files'")
+                print(f">>> Parameter name: 'file'")
                 
                 # Perform the upload - explicitly using POST method
                 start_time = time.time()

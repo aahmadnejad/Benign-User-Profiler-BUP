@@ -5,7 +5,7 @@
     "custom_service_url": "http://192.168.1.55",
     "scp_username": "capwifi",
     "scp_password": "bccc1234",
-    "scp_host": "192.68.1.55",
+    "scp_host": "192.168.1.55",
     "scp_upload_path": "~/file-server/uploads",
     "frequency": 6,
     "time_interval": [3600, 7200],
@@ -154,7 +154,7 @@
         "wait_after": 2
       },
       {
-        "command": "for i in {1..10}; do ping -c 1 -W 1 192.168.1$i; done",
+        "command": "for i in {1..10}; do ping -c 1 -W 1 192.168.1.$i; done",
         "platform": "linux",
         "show_output": true,
         "wait_after": 5

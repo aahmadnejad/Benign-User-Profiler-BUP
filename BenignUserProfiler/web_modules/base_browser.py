@@ -735,13 +735,27 @@ class BaseBrowserModule(ABC):
         try:
             if self.os_type == "Linux":
                 try:
+                    # First try to close gracefully with Alt+F4
                     subprocess.run(["xdotool", "key", "alt+F4"], 
                                 check=False,
                                 stdout=subprocess.DEVNULL, 
                                 stderr=subprocess.DEVNULL)
                     time.sleep(1)
                     
-                    subprocess.run(["killall", "firefox"], 
+                    # Then force kill any remaining Firefox processes
+                    subprocess.run(["killall", "-9", "firefox"], 
+                                check=False,
+                                stdout=subprocess.DEVNULL, 
+                                stderr=subprocess.DEVNULL)
+                    
+                    # Also kill firefox-bin if it exists
+                    subprocess.run(["killall", "-9", "firefox-bin"], 
+                                check=False,
+                                stdout=subprocess.DEVNULL, 
+                                stderr=subprocess.DEVNULL)
+                    
+                    # Also try pkill for more flexible matching
+                    subprocess.run(["pkill", "-9", "-f", "firefox"], 
                                 check=False,
                                 stdout=subprocess.DEVNULL, 
                                 stderr=subprocess.DEVNULL)
