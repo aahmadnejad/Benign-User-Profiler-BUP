@@ -107,7 +107,7 @@ class HTTPModel(TrafficModel):
                         self.model_config["website"] = website
                         module.execute(self.model_config)
                     
-                    rest_time = random.randint(30, 90)
+                    rest_time = random.randint(5, 10)
                     print(f">>> Taking a break for {rest_time} minutes before next website")
                     time.sleep(rest_time * 60)
             elif "link" in self.model_config:

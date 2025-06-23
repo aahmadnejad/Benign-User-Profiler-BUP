@@ -282,7 +282,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Build command with optional flags
-CMD="python -m BenignUserProfiler"
+CMD="python -m BenignUserProfiler -p"
 
 # Always use randomize by default
 RANDOMIZE=1

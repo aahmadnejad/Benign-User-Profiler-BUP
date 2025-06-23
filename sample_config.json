@@ -206,14 +206,10 @@
           "linux_apps": [
             "gnome-calculator",
             "gedit",
-            "gnome-terminal",
             "nautilus",
-            "gnome-software",
             "gnome-system-monitor",
-            "evince",
             "file-roller",
-            "rhythmbox",
-            "snap-store"
+            "rhythmbox"
           ],
           "windows_apps": [
             "calc.exe",

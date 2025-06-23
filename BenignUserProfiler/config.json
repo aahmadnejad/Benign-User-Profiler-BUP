@@ -401,13 +401,6 @@
     ],
     "linux_commands": [
       {
-        "command": "snap-store",
-        "platform": "linux",
-        "description": "Open Software Center",
-        "show_output": false,
-        "use_time": [520, 900]
-      },
-      {
         "command": "rhythmbox",
         "platform": "linux",
         "description": "Open Rhythmbox Music Player",
